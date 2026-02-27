@@ -1,0 +1,69 @@
+=== META-LEARNING KNOWLEDGE SUMMARY ===
+
+Total solutions learned: 103
+
+Model Performance Ranking:
+--------------------------------------------------
+HistGradientBoosting:
+  Average Accuracy: 0.9542
+  Times in Pareto Front: 70/70
+  Win Rate: 100.00%
+
+RandomForest:
+  Average Accuracy: 0.9323
+  Times in Pareto Front: 9/9
+  Win Rate: 100.00%
+
+SGD:
+  Average Accuracy: 0.9207
+  Times in Pareto Front: 16/16
+  Win Rate: 100.00%
+
+LogisticRegression:
+  Average Accuracy: 0.9203
+  Times in Pareto Front: 8/8
+  Win Rate: 100.00%
+
+
+Top 10 Solutions:
+--------------------------------------------------
+1. SGD
+   Accuracy: 0.9229, Size: 58
+   Fitness: 0.9296
+
+2. SGD
+   Accuracy: 0.9207, Size: 58
+   Fitness: 0.9281
+
+3. SGD
+   Accuracy: 0.9207, Size: 58
+   Fitness: 0.9281
+
+4. SGD
+   Accuracy: 0.9207, Size: 58
+   Fitness: 0.9281
+
+5. SGD
+   Accuracy: 0.9207, Size: 58
+   Fitness: 0.9281
+
+6. SGD
+   Accuracy: 0.9207, Size: 58
+   Fitness: 0.9281
+
+7. SGD
+   Accuracy: 0.9207, Size: 58
+   Fitness: 0.9281
+
+8. SGD
+   Accuracy: 0.9207, Size: 58
+   Fitness: 0.9281
+
+9. SGD
+   Accuracy: 0.9207, Size: 58
+   Fitness: 0.9281
+
+10. LogisticRegression
+   Accuracy: 0.9207, Size: 58
+   Fitness: 0.9281
+
