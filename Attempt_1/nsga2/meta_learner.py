@@ -3,6 +3,7 @@ import pickle
 import os
 from collections import defaultdict
 import numpy as np
+import random
 from .models import Model
 
 
@@ -179,7 +180,7 @@ class MetaLearner:
         """
         # Base mutation rate
         base_pm = 0.3
-        
+
         # If diversity is high, reduce mutation (exploit good solutions)
         # If diversity is low, increase mutation (explore new regions)
         if population_diversity > 0.7:
@@ -187,7 +188,12 @@ class MetaLearner:
         elif population_diversity < 0.3:
             return base_pm * 2.0  # 0.60 - exploration
         else:
-            return base_pm
+            # Mid-range diversity: randomly choose to nudge mutation by +/-0.1
+            delta = random.choice([-0.1, 0.1])
+            pm = base_pm + delta
+            # Clamp to sensible bounds
+            pm = max(0.0, min(1.0, pm))
+            return pm
     
     def compute_population_diversity(self, population):
         """

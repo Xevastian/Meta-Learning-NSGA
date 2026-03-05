@@ -269,7 +269,7 @@ def run_baseline_vs_meta_learning(data_path, pop_size=15, generations=8, num_run
 
 if __name__ == '__main__':
     # Configuration
-    DATA_PATH = 'train.csv'  # Change to your dataset
+    DATA_PATH = 'liver.csv'  # Change to your dataset
     POP_SIZE = 15
     GENERATIONS = 8
     NUM_RUNS = 2

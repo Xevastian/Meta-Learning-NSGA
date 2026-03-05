@@ -14,8 +14,9 @@ class Model:
     
     def mutate(self, p=0.5):
         if random.random() < p:
-            # Mutate current model parameters
-            self.__model = self.__builder(self.__modelName)
+            # Adjust current model parameters by ±20%
+            self.__adjustParams()
+            self.__model = self.__model.__class__(**self.__modelParams)
         else:
             # Switch to completely new model type
             self._mutateNew()
@@ -24,6 +25,33 @@ class Model:
         model = random.choice(['MLP', 'RandomForest', 'HistGradientBoosting', 'LogisticRegression', 'SGD', 'KNeighbors'])
         self.__modelName = model
         self.__model = self.__builder(model)
+
+    def __adjustParams(self):
+        """Adjust existing parameters by ±20% for numerical values."""
+        numerical_params = {
+            'MLP': ['alpha', 'learning_rate_init'],
+            'RandomForest': ['n_estimators', 'max_depth', 'min_samples_split', 'min_samples_leaf'],
+            'HistGradientBoosting': ['max_iter', 'max_depth', 'learning_rate', 'max_leaf_nodes', 'min_samples_leaf', 'l2_regularization', 'max_bins', 'validation_fraction', 'n_iter_no_change', 'tol'],
+            'LogisticRegression': ['C', 'max_iter', 'tol'],
+            'SGD': ['alpha', 'l1_ratio', 'eta0', 'max_iter', 'tol', 'n_iter_no_change'],
+            'KNeighbors': ['n_neighbors', 'leaf_size']
+        }
+        
+        if self.__modelName in numerical_params:
+            for param in numerical_params[self.__modelName]:
+                if param in self.__modelParams and isinstance(self.__modelParams[param], (int, float)):
+                    # Adjust by ±20%
+                    factor = random.uniform(0.8, 1.2)
+                    self.__modelParams[param] = self.__modelParams[param] * factor
+                    # Clamp to reasonable bounds
+                    if param in ['l1_ratio', 'validation_fraction']:
+                        self.__modelParams[param] = max(0.0, min(1.0, self.__modelParams[param]))
+                    elif param == 'max_depth' and self.__modelParams[param] is not None:
+                        self.__modelParams[param] = max(1, int(self.__modelParams[param]))
+                    elif param in ['n_estimators', 'max_iter', 'n_neighbors', 'leaf_size', 'min_samples_split', 'min_samples_leaf', 'max_leaf_nodes', 'max_bins', 'n_iter_no_change']:
+                        self.__modelParams[param] = max(1, int(self.__modelParams[param]))
+                    elif param in ['alpha', 'learning_rate', 'learning_rate_init', 'eta0', 'tol', 'l2_regularization', 'C']:
+                        self.__modelParams[param] = max(1e-10, self.__modelParams[param])
 
     def __builder(self, model):
         build = {
@@ -159,7 +187,7 @@ class Model:
         """HistGradientBoostingClassifier configuration"""
         params = {}
         
-        params['max_iter'] = random.choice([50, 100, 150, 200, 300])
+        params['max_iter'] = random.choice(range(50,301))
         params['max_depth'] = random.choice([None, 3, 5, 7, 10, 15])
         params['learning_rate'] = float(10 ** random.uniform(-3, 0))  # 0.001 to 1.0
         params['max_leaf_nodes'] = random.choice([None, 15, 31, 63, 127])
