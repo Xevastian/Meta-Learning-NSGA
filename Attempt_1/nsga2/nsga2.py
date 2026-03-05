@@ -351,12 +351,13 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig(plot_path, dpi=150)
-    print(f"\n✓ Save visualization to {plot_path}")
-    try:
-        plt.show()
-    except Exception:
-        pass
+    if plot_path is not None:
+        plt.savefig(plot_path, dpi=150)
+        print(f"\n✓ Save visualization to {plot_path}")
+        try:
+            plt.show()
+        except Exception:
+            pass
 
     return pop
 

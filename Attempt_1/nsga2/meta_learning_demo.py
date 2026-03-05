@@ -1,17 +1,19 @@
 """
-Meta-Learning NSGA-II Demo
-===========================
+Meta-Learning NSGA-II Improvement Demo
+=======================================
 
-This script demonstrates how meta-learning accelerates NSGA-II convergence.
+This script demonstrates how meta-learning improves performance over multiple
+sequential runs of NSGA-II.
 
-The approach uses:
+The approach shows:
 1. Warm-starting: Initialize population with previously found good solutions
 2. Adaptive operators: Adjust mutation rate based on population diversity
-3. Meta-knowledge base: Learn from previous optimization runs
+3. Meta-knowledge accumulation: Learning improves over successive runs
 
-Run this script to compare:
-- Baseline NSGA-II (without meta-learning)
-- Meta-Learning NSGA-II (with warm-start & adaptive operators)
+Run this script to see:
+- Baseline NSGA-II performance (single run)
+- Meta-Learning NSGA-II improvement over multiple sequential runs
+- Performance trends and speedup factors (printed to console)
 """
 
 import os
@@ -19,7 +21,6 @@ import sys
 import time
 import json
 import pickle
-import matplotlib.pyplot as plt
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -78,19 +79,19 @@ def hypervolume_indicator(front, ref_point=None):
     return hv
 
 
-def run_baseline_vs_meta_learning(data_path, pop_size=15, generations=8, num_runs=2):
+def run_meta_learning_improvement(data_path, pop_size=15, generations=8, num_runs=5):
     """
-    Compare baseline NSGA-II vs Meta-Learning NSGA-II.
+    Demonstrate meta-learning improvement over multiple sequential runs.
     
     Args:
         data_path: Path to dataset CSV
         pop_size: Population size
         generations: Number of generations
-        num_runs: Number of sequential runs to perform
+        num_runs: Number of sequential meta-learning runs to perform
     """
     
     print("\n" + "="*70)
-    print("META-LEARNING NSGA-II COMPARISON")
+    print("META-LEARNING NSGA-II IMPROVEMENT OVER MULTIPLE RUNS")
     print("="*70 + "\n")
     
     # Test data path
@@ -102,20 +103,20 @@ def run_baseline_vs_meta_learning(data_path, pop_size=15, generations=8, num_run
     print(f"Dataset: {os.path.basename(data_path)}")
     print(f"Population Size: {pop_size}")
     print(f"Generations: {generations}")
-    print(f"Number of Sequential Runs: {num_runs}\n")
+    print(f"Number of Sequential Meta-Learning Runs: {num_runs}\n")
     
     results = {
-        'baseline': [],
-        'meta_learning': [],
-        'speedup': []
+        'baseline': None,
+        'meta_runs': [],
+        'improvement_trends': []
     }
     
-    # ============ RUN 1: Baseline (no meta-learning) ============
+    # ============ BASELINE RUN (No meta-learning) ============
     print("\n" + "-"*70)
-    print("RUN 1: BASELINE NSGA-II (No Meta-Learning)")
+    print("BASELINE: Standard NSGA-II (No Meta-Learning)")
     print("-"*70 + "\n")
     
-    # Remove meta-knowledge to start fresh
+    # Remove any existing meta-knowledge
     if os.path.exists('meta_knowledge.pkl'):
         os.remove('meta_knowledge.pkl')
     
@@ -124,9 +125,9 @@ def run_baseline_vs_meta_learning(data_path, pop_size=15, generations=8, num_run
         pop_size=pop_size, 
         generations=generations, 
         data_path=data_path,
-        plot_path='baseline_progression.png',
+        plot_path=None,  # No plotting
         use_warm_start=False,
-        adaptive_operators=False  # Don't use adaptive operators
+        adaptive_operators=False
     )
     baseline_time = time.time() - start_time
     
@@ -136,133 +137,143 @@ def run_baseline_vs_meta_learning(data_path, pop_size=15, generations=8, num_run
                        for ind in fronts_baseline[0]] if fronts_baseline else []
     hv_baseline = hypervolume_indicator(pareto_baseline)
     
-    results['baseline'].append({
+    results['baseline'] = {
         'time': baseline_time,
         'pareto_size': len(pareto_baseline),
-        'hypervolume': hv_baseline
-    })
+        'hypervolume': hv_baseline,
+        'avg_accuracy': np.mean([p['accuracy'] for p in pareto_baseline]) if pareto_baseline else 0
+    }
     
-    print(f"\n✓ Baseline NSGA-II completed in {baseline_time:.2f}s")
+    print(f"\n✓ Baseline completed in {baseline_time:.2f}s")
     print(f"  - Pareto front size: {len(pareto_baseline)}")
     print(f"  - Hypervolume: {hv_baseline:.2f}")
+    print(f"  - Avg accuracy: {results['baseline']['avg_accuracy']:.4f}")
     
-    # ============ RUN 2: Meta-Learning (warm-start + adaptive) ============
-    print("\n" + "-"*70)
-    print("RUN 2: META-LEARNING NSGA-II (With Warm-Start & Adaptive Operators)")
-    print("-"*70 + "\n")
-    
-    start_time = time.time()
-    pop_meta = nsga2(
-        pop_size=pop_size, 
-        generations=generations, 
-        data_path=data_path,
-        plot_path='meta_learning_progression.png',
-        use_warm_start=True,  # Enable warm-start
-        adaptive_operators=True  # Enable adaptive operators
-    )
-    meta_time = time.time() - start_time
-    
-    # Extract Pareto front
-    fronts_meta = nondominated_sort(pop_meta)
-    pareto_meta = [{'accuracy': ind['accuracy'], 'size': ind['size']} 
-                   for ind in fronts_meta[0]] if fronts_meta else []
-    hv_meta = hypervolume_indicator(pareto_meta)
-    
-    results['meta_learning'].append({
-        'time': meta_time,
-        'pareto_size': len(pareto_meta),
-        'hypervolume': hv_meta
-    })
-    
-    speedup = baseline_time / meta_time
-    results['speedup'].append(speedup)
-    
-    print(f"\n✓ Meta-Learning NSGA-II completed in {meta_time:.2f}s")
-    print(f"  - Pareto front size: {len(pareto_meta)}")
-    print(f"  - Hypervolume: {hv_meta:.2f}")
-    
-    # ============ RESULTS SUMMARY ============
+    # ============ MULTIPLE META-LEARNING RUNS ============
     print("\n" + "="*70)
-    print("RESULTS SUMMARY")
+    print("META-LEARNING RUNS: Demonstrating Knowledge Accumulation")
+    print("="*70 + "\n")
+    
+    for run_num in range(1, num_runs + 1):
+        print(f"\nRun {run_num}: Meta-Learning NSGA-II")
+        print("-"*50)
+        
+        start_time = time.time()
+        pop_meta = nsga2(
+            pop_size=pop_size, 
+            generations=generations, 
+            data_path=data_path,
+            plot_path=None,  # No plotting
+            use_warm_start=True,
+            adaptive_operators=True
+        )
+        meta_time = time.time() - start_time
+        
+        # Extract Pareto front
+        fronts_meta = nondominated_sort(pop_meta)
+        pareto_meta = [{'accuracy': ind['accuracy'], 'size': ind['size']} 
+                       for ind in fronts_meta[0]] if fronts_meta else []
+        hv_meta = hypervolume_indicator(pareto_meta)
+        avg_acc_meta = np.mean([p['accuracy'] for p in pareto_meta]) if pareto_meta else 0
+        
+        run_result = {
+            'run': run_num,
+            'time': meta_time,
+            'pareto_size': len(pareto_meta),
+            'hypervolume': hv_meta,
+            'avg_accuracy': avg_acc_meta
+        }
+        
+        results['meta_runs'].append(run_result)
+        
+        # Calculate improvement over baseline
+        time_improvement = results['baseline']['time'] / meta_time if meta_time > 0 else 1
+        hv_improvement = hv_meta - hv_baseline
+        acc_improvement = avg_acc_meta - results['baseline']['avg_accuracy']
+        
+        improvement = {
+            'run': run_num,
+            'time_speedup': time_improvement,
+            'hv_improvement': hv_improvement,
+            'acc_improvement': acc_improvement
+        }
+        results['improvement_trends'].append(improvement)
+        
+        print(f"\n✓ Run {run_num} completed in {meta_time:.2f}s")
+        print(f"  - Pareto front size: {len(pareto_meta)}")
+        print(f"  - Hypervolume: {hv_meta:.2f} ({hv_improvement:+.2f} vs baseline)")
+        print(f"  - Avg accuracy: {avg_acc_meta:.4f} ({acc_improvement:+.4f} vs baseline)")
+        print(f"  - Time: {time_improvement:.2f}x {'faster' if time_improvement > 1 else 'slower'} than baseline")
+        
+        # Show trend from previous run
+        if run_num > 1:
+            prev_hv = results['meta_runs'][-2]['hypervolume']
+            trend = "↑ Improving" if hv_meta > prev_hv else "↓ Declining" if hv_meta < prev_hv else "→ Stable"
+            print(f"  - Trend vs Run {run_num-1}: {trend}")
+    
+    # ============ PERFORMANCE ANALYSIS ============
+    print("\n" + "="*70)
+    print("PERFORMANCE ANALYSIS")
     print("="*70)
     
-    print(f"\n{'Metric':<30} {'Baseline':<20} {'Meta-Learning':<20} {'Improvement':<15}")
-    print("-"*85)
-    print(f"{'Execution Time (s)':<30} {baseline_time:<20.2f} {meta_time:<20.2f} {speedup:.2f}x faster" if speedup > 1 
-          else f"{'Execution Time (s)':<30} {baseline_time:<20.2f} {meta_time:<20.2f} {1/speedup:.2f}x slower")
-    print(f"{'Pareto Front Size':<30} {len(pareto_baseline):<20} {len(pareto_meta):<20} {len(pareto_meta) - len(pareto_baseline):+.0f}")
-    print(f"{'Hypervolume':<30} {hv_baseline:<20.2f} {hv_meta:<20.2f} {hv_meta - hv_baseline:+.2f}")
+    # Extract trends
+    runs = [r['run'] for r in results['meta_runs']]
+    times = [r['time'] for r in results['meta_runs']]
+    hypervolumes = [r['hypervolume'] for r in results['meta_runs']]
+    accuracies = [r['avg_accuracy'] for r in results['meta_runs']]
     
-    # Quality metric: average accuracy in Pareto front
-    if pareto_baseline:
-        avg_acc_baseline = np.mean([p['accuracy'] for p in pareto_baseline])
-    else:
-        avg_acc_baseline = 0
+    print(f"\nHypervolume Trend:")
+    for i, hv in enumerate(hypervolumes):
+        marker = "↑" if i > 0 and hv > hypervolumes[i-1] else "↓" if i > 0 and hv < hypervolumes[i-1] else "→"
+        print(f"  Run {runs[i]}: {hv:.2f} {marker}")
     
-    if pareto_meta:
-        avg_acc_meta = np.mean([p['accuracy'] for p in pareto_meta])
-    else:
-        avg_acc_meta = 0
+    print(f"\nExecution Time Trend:")
+    for i, t in enumerate(times):
+        marker = "↓" if i > 0 and t < times[i-1] else "↑" if i > 0 and t > times[i-1] else "→"
+        print(f"  Run {runs[i]}: {t:.2f}s {marker}")
     
-    print(f"{'Avg Accuracy in Pareto':<30} {avg_acc_baseline:<20.4f} {avg_acc_meta:<20.4f} {avg_acc_meta - avg_acc_baseline:+.4f}")
-    
-    # ============ SEQUENTIAL RUNS (Demonstrating meta-knowledge accumulation) ============
-    if num_runs > 2:
-        print("\n" + "="*70)
-        print(f"ADDITIONAL RUNS: Demonstrating Meta-Knowledge Accumulation")
-        print("="*70 + "\n")
+    # Calculate overall improvement
+    if num_runs > 1:
+        first_run = results['meta_runs'][0]
+        last_run = results['meta_runs'][-1]
         
-        for run_num in range(3, num_runs + 1):
-            print(f"\nRun {run_num}: Meta-Learning NSGA-II (with accumulated meta-knowledge)")
-            print("-"*70)
-            
-            start_time = time.time()
-            pop_meta = nsga2(
-                pop_size=pop_size, 
-                generations=generations, 
-                data_path=data_path,
-                plot_path=f'meta_learning_run{run_num}.png',
-                use_warm_start=True,
-                adaptive_operators=True
-            )
-            meta_time = time.time() - start_time
-            
-            fronts_meta = nondominated_sort(pop_meta)
-            pareto_meta = [{'accuracy': ind['accuracy'], 'size': ind['size']} 
-                           for ind in fronts_meta[0]] if fronts_meta else []
-            hv_meta = hypervolume_indicator(pareto_meta)
-            
-            results['meta_learning'].append({
-                'time': meta_time,
-                'pareto_size': len(pareto_meta),
-                'hypervolume': hv_meta
-            })
-            
-            print(f"\n✓ Run {run_num} completed in {meta_time:.2f}s")
-            print(f"  - Pareto front size: {len(pareto_meta)}")
-            print(f"  - Hypervolume: {hv_meta:.2f}")
-            print(f"  - Trend: {'↑' if hv_meta > results['meta_learning'][-2]['hypervolume'] else '↓'} Improving" 
-                  if len(results['meta_learning']) > 1 else "  - First run (baseline)")
+        overall_hv_improvement = last_run['hypervolume'] - first_run['hypervolume']
+        overall_time_improvement = first_run['time'] / last_run['time'] if last_run['time'] > 0 else 1
+        
+        print(f"\nOverall Meta-Learning Improvement (Run 1 → Run {num_runs}):")
+        print(f"  - Hypervolume: {overall_hv_improvement:+.2f}")
+        print(f"  - Execution Time: {overall_time_improvement:.2f}x {'faster' if overall_time_improvement > 1 else 'slower'}")
     
     # ============ VISUALIZATION ============
     print("\n" + "="*70)
-    print("Generating comparison visualizations...")
+    print("Performance Results Summary")
     print("="*70 + "\n")
     
-    # Plot meta-knowledge evolution
+    # Print detailed results table
+    print(f"{'Run':<5} {'Time (s)':<10} {'Pareto Size':<12} {'Hypervolume':<12} {'Avg Accuracy':<14} {'Speedup':<8}")
+    print("-" * 75)
+    
+    # Baseline
+    print(f"{'Base':<5} {results['baseline']['time']:<10.2f} {results['baseline']['pareto_size']:<12} {results['baseline']['hypervolume']:<12.2f} {results['baseline']['avg_accuracy']:<14.4f} {'1.00x':<8}")
+    
+    # Meta runs
+    for run in results['meta_runs']:
+        speedup = results['baseline']['time'] / run['time'] if run['time'] > 0 else 1
+        print(f"{run['run']:<5} {run['time']:<10.2f} {run['pareto_size']:<12} {run['hypervolume']:<12.2f} {run['avg_accuracy']:<14.4f} {speedup:<8.2f}x")
+    
+    # Skip plotting - just print results
+    print("\n✓ Performance results displayed above")
+    print("  (Plotting disabled for faster execution)")
+    
+    # Meta-knowledge summary
     meta_stats_path = 'meta_summary.txt'
     if os.path.exists(meta_stats_path):
-        print(f"✓ Meta-knowledge summary saved to: {meta_stats_path}")
+        print(f"\n✓ Meta-knowledge summary saved to: {meta_stats_path}")
         with open(meta_stats_path, 'r') as f:
             summary = f.read()
-            print("\n" + summary)
-    
-    print("\n✓ Visualizations saved:")
-    print("  - baseline_progression.png (Baseline Pareto front evolution)")
-    print("  - meta_learning_progression.png (Meta-Learning Pareto front evolution)")
-    if num_runs > 2:
-        for i in range(3, num_runs + 1):
-            print(f"  - meta_learning_run{i}.png")
+            print("\nMeta-Knowledge Summary:")
+            print("-" * 40)
+            print(summary)
     
     return results
 
@@ -272,7 +283,7 @@ if __name__ == '__main__':
     DATA_PATH = 'liver.csv'  # Change to your dataset
     POP_SIZE = 15
     GENERATIONS = 8
-    NUM_RUNS = 2
+    NUM_RUNS = 5  # Number of sequential meta-learning runs
     
     # Check if data file exists
     if not os.path.exists(DATA_PATH):
@@ -283,8 +294,8 @@ if __name__ == '__main__':
                 print(f"  - {f}")
         sys.exit(1)
     
-    # Run comparison
-    results = run_baseline_vs_meta_learning(
+    # Run meta-learning improvement demonstration
+    results = run_meta_learning_improvement(
         data_path=DATA_PATH,
         pop_size=POP_SIZE,
         generations=GENERATIONS,
@@ -292,11 +303,12 @@ if __name__ == '__main__':
     )
     
     print("\n" + "="*70)
-    print("Meta-Learning NSGA-II Demo Complete!")
+    print("Meta-Learning Improvement Demo Complete!")
     print("="*70)
     print("\nKey Takeaways:")
-    print("1. Meta-learning accelerates convergence by warm-starting with known good solutions")
-    print("2. Adaptive operators (mutation rate) respond to population diversity")
-    print("3. Meta-knowledge improves over successive runs on similar problems")
-    print("4. Suitable for scenarios with multiple runs on related optimization problems")
+    print("1. Meta-learning shows improvement over multiple sequential runs")
+    print("2. Warm-starting with accumulated knowledge accelerates convergence")
+    print("3. Adaptive operators help maintain population diversity")
+    print("4. Performance typically improves as meta-knowledge accumulates")
+    print("5. Best suited for optimization problems run repeatedly on similar datasets")
     print("\nFor more information, see: meta_learner.py and nsga2.py")
