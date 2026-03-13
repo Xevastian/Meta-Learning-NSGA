@@ -1,0 +1,2 @@
+python nsga2.py "C:\Users\suman\OneDrive\Documents\4th year\Research\Notebooks\#2 NSGA-II\Attempt_2\Spam.csv"
+python nsga2.py "csv file path"
