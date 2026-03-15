@@ -1,69 +1,74 @@
 === META-LEARNING KNOWLEDGE SUMMARY ===
 
-Total solutions learned: 103
+Total solutions learned: 91
 
 Model Performance Ranking:
 --------------------------------------------------
 HistGradientBoosting:
-  Average Accuracy: 0.9542
-  Times in Pareto Front: 70/70
+  Average Accuracy: 0.9520
+  Times in Pareto Front: 59/59
+  Win Rate: 100.00%
+
+MLP:
+  Average Accuracy: 0.9349
+  Times in Pareto Front: 1/1
   Win Rate: 100.00%
 
 RandomForest:
-  Average Accuracy: 0.9323
-  Times in Pareto Front: 9/9
+  Average Accuracy: 0.9305
+  Times in Pareto Front: 2/2
   Win Rate: 100.00%
 
 SGD:
-  Average Accuracy: 0.9207
-  Times in Pareto Front: 16/16
+  Average Accuracy: 0.9240
+  Times in Pareto Front: 27/27
   Win Rate: 100.00%
 
 LogisticRegression:
-  Average Accuracy: 0.9203
-  Times in Pareto Front: 8/8
+  Average Accuracy: 0.9186
+  Times in Pareto Front: 2/2
   Win Rate: 100.00%
 
 
 Top 10 Solutions:
 --------------------------------------------------
 1. SGD
-   Accuracy: 0.9229, Size: 58
-   Fitness: 0.9296
+   Accuracy: 0.9251, Size: 58
+   Fitness: 0.9311
 
 2. SGD
-   Accuracy: 0.9207, Size: 58
-   Fitness: 0.9281
+   Accuracy: 0.9251, Size: 58
+   Fitness: 0.9311
 
 3. SGD
-   Accuracy: 0.9207, Size: 58
-   Fitness: 0.9281
+   Accuracy: 0.9251, Size: 58
+   Fitness: 0.9311
 
 4. SGD
-   Accuracy: 0.9207, Size: 58
-   Fitness: 0.9281
+   Accuracy: 0.9251, Size: 58
+   Fitness: 0.9311
 
 5. SGD
-   Accuracy: 0.9207, Size: 58
-   Fitness: 0.9281
+   Accuracy: 0.9251, Size: 58
+   Fitness: 0.9311
 
 6. SGD
-   Accuracy: 0.9207, Size: 58
-   Fitness: 0.9281
+   Accuracy: 0.9251, Size: 58
+   Fitness: 0.9311
 
 7. SGD
-   Accuracy: 0.9207, Size: 58
-   Fitness: 0.9281
+   Accuracy: 0.9251, Size: 58
+   Fitness: 0.9311
 
 8. SGD
-   Accuracy: 0.9207, Size: 58
-   Fitness: 0.9281
+   Accuracy: 0.9240, Size: 58
+   Fitness: 0.9304
 
 9. SGD
-   Accuracy: 0.9207, Size: 58
-   Fitness: 0.9281
+   Accuracy: 0.9240, Size: 58
+   Fitness: 0.9304
 
-10. LogisticRegression
-   Accuracy: 0.9207, Size: 58
-   Fitness: 0.9281
+10. SGD
+   Accuracy: 0.9240, Size: 58
+   Fitness: 0.9304
 

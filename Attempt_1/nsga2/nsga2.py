@@ -5,9 +5,17 @@ import warnings
 import matplotlib.pyplot as plt
 import pickle
 import numpy as np
-from .models import Model
-from .trainer import Trainer
-from .meta_learner import MetaLearner
+
+# Import modules with fallbacks for relative imports
+try:
+    from .models import Model
+    from .trainer import Trainer
+    from .meta_learner import MetaLearner
+except ImportError:
+    # Fallback for when run as script
+    from models import Model
+    from trainer import Trainer
+    from meta_learner import MetaLearner
 
 warnings.filterwarnings("ignore")
 
@@ -162,7 +170,8 @@ def evaluate_model(model, data_path, verbose=False):
 
 
 def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto_progression.png', 
-          use_warm_start=True, meta_db_path='meta_knowledge.pkl', adaptive_operators=True):
+          use_warm_start=True, meta_db_path='meta_knowledge.pkl', adaptive_operators=True, seed=None, 
+          save_plot=True, show_plot=True):
     """
     NSGA-II with meta-learning enhancements.
     
@@ -175,6 +184,9 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
         use_warm_start: If True, initialize with meta-knowledge
         meta_db_path: Path to meta-knowledge database
         adaptive_operators: If True, adjust mutation rate based on population diversity
+        seed: Random seed for reproducibility (int or None)
+        save_plot: If False, skip writing plot files (useful for headless runs)
+        show_plot: If False, do not display the plot window (useful in non-interactive environments)
     
     Returns:
         Final population
@@ -182,8 +194,15 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
     if data_path is None:
         raise ValueError("data_path must be provided")
     
+    # Set random seeds for reproducibility
+    if seed is not None:
+        import random
+        random.seed(seed)
+        np.random.seed(seed)
+        print(f"Random seed set to: {seed}")
+    
     # Initialize meta-learner
-    meta_learner = MetaLearner(meta_db_path=meta_db_path)
+    meta_learner = MetaLearner(meta_db_path=meta_db_path, seed=seed)
     
     # Initialize population
     print("\n" + "="*60)
@@ -351,12 +370,18 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig(plot_path, dpi=150)
-    print(f"\n✓ Save visualization to {plot_path}")
-    try:
-        plt.show()
-    except Exception:
-        pass
+    if save_plot and plot_path:
+        plt.savefig(plot_path, dpi=150)
+        print(f"\n✓ Save visualization to {plot_path}")
+
+    if show_plot:
+        try:
+            plt.show()
+        except Exception:
+            pass
+
+    # Close the figure to avoid memory buildup in long-running scripts
+    plt.close()
 
     return pop
 

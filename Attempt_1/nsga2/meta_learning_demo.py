@@ -31,50 +31,50 @@ try:
     from .nsga2 import nsga2, nondominated_sort
     from .meta_learner import MetaLearner
 except Exception:
-    try:
-        # Running from project root: python nsga2/meta_learning_demo.py
-        from nsga2.nsga2 import nsga2, nondominated_sort
-        from nsga2.meta_learner import MetaLearner
-    except Exception:
-        # Last resort: try importing local modules (if cwd is nsga2/)
-        from nsga2 import nsga2 as _nsga2_mod
-        nsga2 = getattr(_nsga2_mod, 'nsga2', None)
-        nondominated_sort = getattr(_nsga2_mod, 'nondominated_sort', None)
-        from meta_learner import MetaLearner
+    # Running from nsga2 directory: python meta_learning_demo.py
+    from nsga2 import nsga2, nondominated_sort
+    from meta_learner import MetaLearner
 
 
 def hypervolume_indicator(front, ref_point=None):
-    """
-    Compute hypervolume indicator (approximate).
-    Higher is better.
-    
-    Args:
-        front: Pareto front (list of dicts with 'accuracy', 'size')
-        ref_point: Reference point (default: worst point)
-    
-    Returns:
-        Hypervolume value
+    """Compute the 2D hypervolume of a Pareto front.
+
+    This implementation assumes objectives:
+      - accuracy (maximize)
+      - size (minimize)
+
+    The hypervolume is computed exactly in 2D by sweeping along the size axis.
     """
     if not front:
         return 0.0
-    
+
     accs = [p['accuracy'] for p in front]
     sizes = [p['size'] for p in front]
-    
+
     if ref_point is None:
-        # Use a point worse than all solutions
         ref_point = (min(accs) - 0.1, max(sizes) + 1000)
-    
-    # Simple hypervolume approximation: area under the curve
-    sorted_front = sorted(front, key=lambda x: x['accuracy'], reverse=True)
-    hv = 0
-    prev_size = ref_point[1]
+
+    ref_acc, ref_size = ref_point
+
+    # Sort by size (minimize), ascending.
+    sorted_front = sorted(front, key=lambda x: x['size'])
+
+    hv = 0.0
+    best_acc = ref_acc
+
     for p in sorted_front:
-        width = prev_size - p['size']
-        height = p['accuracy'] - ref_point[0]
+        acc = p['accuracy']
+        size = p['size']
+
+        # Only count if this point improves accuracy over previous points
+        if acc <= best_acc:
+            continue
+
+        width = max(0.0, ref_size - size)
+        height = acc - best_acc
         hv += width * height
-        prev_size = p['size']
-    
+        best_acc = acc
+
     return hv
 
 
@@ -126,7 +126,10 @@ def run_baseline_vs_meta_learning(data_path, pop_size=15, generations=8, num_run
         data_path=data_path,
         plot_path='baseline_progression.png',
         use_warm_start=False,
-        adaptive_operators=False  # Don't use adaptive operators
+        adaptive_operators=False,  # Don't use adaptive operators
+        seed=67,
+        save_plot=False,
+        show_plot=False
     )
     baseline_time = time.time() - start_time
     
@@ -158,7 +161,10 @@ def run_baseline_vs_meta_learning(data_path, pop_size=15, generations=8, num_run
         data_path=data_path,
         plot_path='meta_learning_progression.png',
         use_warm_start=True,  # Enable warm-start
-        adaptive_operators=True  # Enable adaptive operators
+        adaptive_operators=True,  # Enable adaptive operators
+        seed=67,
+        save_plot=False,
+        show_plot=False
     )
     meta_time = time.time() - start_time
     
@@ -223,7 +229,10 @@ def run_baseline_vs_meta_learning(data_path, pop_size=15, generations=8, num_run
                 data_path=data_path,
                 plot_path=f'meta_learning_run{run_num}.png',
                 use_warm_start=True,
-                adaptive_operators=True
+                adaptive_operators=True,
+                seed=67,
+                save_plot=False,
+                show_plot=False
             )
             meta_time = time.time() - start_time
             
@@ -244,32 +253,28 @@ def run_baseline_vs_meta_learning(data_path, pop_size=15, generations=8, num_run
             print(f"  - Trend: {'↑' if hv_meta > results['meta_learning'][-2]['hypervolume'] else '↓'} Improving" 
                   if len(results['meta_learning']) > 1 else "  - First run (baseline)")
     
-    # ============ VISUALIZATION ============
+    # ============ VISUALIZATION (Disabled) ============
     print("\n" + "="*70)
-    print("Generating comparison visualizations...")
+    print("Visualization output is disabled (save_plot=False). No plot files were written.")
     print("="*70 + "\n")
-    
-    # Plot meta-knowledge evolution
+
+    # Meta-knowledge summary (if present)
     meta_stats_path = 'meta_summary.txt'
     if os.path.exists(meta_stats_path):
         print(f"✓ Meta-knowledge summary saved to: {meta_stats_path}")
         with open(meta_stats_path, 'r') as f:
             summary = f.read()
             print("\n" + summary)
-    
-    print("\n✓ Visualizations saved:")
-    print("  - baseline_progression.png (Baseline Pareto front evolution)")
-    print("  - meta_learning_progression.png (Meta-Learning Pareto front evolution)")
-    if num_runs > 2:
-        for i in range(3, num_runs + 1):
-            print(f"  - meta_learning_run{i}.png")
-    
+
     return results
 
 
 if __name__ == '__main__':
+    # Set seed for reproducibility
+    np.random.seed(67)
+    
     # Configuration
-    DATA_PATH = 'train.csv'  # Change to your dataset
+    DATA_PATH = 'Spam.csv'  # Change to your dataset
     POP_SIZE = 15
     GENERATIONS = 8
     NUM_RUNS = 2

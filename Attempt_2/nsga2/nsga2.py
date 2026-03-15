@@ -4,6 +4,7 @@ import copy
 import warnings
 import matplotlib.pyplot as plt
 import pickle
+import numpy as np
 from models import Model
 from trainer import Trainer
 
@@ -159,10 +160,30 @@ def evaluate_model(model, data_path, verbose=True):
         return 0.0, 1e9
 
 
-def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto_progression.png'):
+def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto_progression.png', seed=None):
+    """
+    NSGA-II multi-objective optimization algorithm.
+    
+    Args:
+        pop_size: Population size
+        generations: Number of generations
+        pm: Mutation probability
+        data_path: Path to dataset CSV
+        plot_path: Path to save Pareto progression plot
+        seed: Random seed for reproducibility (int or None)
+    
+    Returns:
+        Final population
+    """
     if data_path is None:
         raise ValueError("data_path must be provided")
-
+    
+    # Set random seeds for reproducibility
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+        print(f"Random seed set to: {seed}")
+    
     # Initialize population
     population = [Model() for _ in range(pop_size)]
     pop = []

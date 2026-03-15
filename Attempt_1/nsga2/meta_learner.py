@@ -3,7 +3,12 @@ import pickle
 import os
 from collections import defaultdict
 import numpy as np
-from .models import Model
+
+# Import with fallback
+try:
+    from .models import Model
+except ImportError:
+    from models import Model
 
 
 def _default_model_stats():
@@ -16,13 +21,18 @@ class MetaLearner:
     to enable faster convergence on new problems.
     """
     
-    def __init__(self, meta_db_path='meta_knowledge.pkl'):
+    def __init__(self, meta_db_path='meta_knowledge.pkl', seed=None):
         """
         Initialize meta-learner.
         
         Args:
             meta_db_path: Path to store meta-knowledge database
+            seed: Random seed for reproducibility
         """
+        # Set random seed for reproducibility
+        if seed is not None:
+            np.random.seed(seed)
+        
         self.meta_db_path = meta_db_path
         self.meta_knowledge = {
             'solutions': [],  # List of good solutions

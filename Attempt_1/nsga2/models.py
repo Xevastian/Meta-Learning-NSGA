@@ -7,7 +7,12 @@ import numpy as np
 
 class Model:
     
-    def __init__(self, model_name=None):
+    def __init__(self, model_name=None, seed=None):
+        # Set seed if provided
+        if seed is not None:
+            random.seed(seed)
+            np.random.seed(seed)
+        
         self.__modelName = model_name if model_name else random.choice(['MLP', 'RandomForest', 'HistGradientBoosting', 'LogisticRegression', 'SGD', 'KNeighbors'])
         self.__modelParams = {}
         self.__model = self.__builder(self.__modelName)
