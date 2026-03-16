@@ -218,17 +218,17 @@ def get_warm_start_population(pop_size, prefer_models=None):
 ---
 
 ## Algorithm Flow
-
+NSGA
 ### Without Meta-Learning
 
 ```
 START
 │
-├─ Generate random population
+├─ Generate random population based on seed
 ├─ FOR each generation:
-│  ├─ Evaluate population
+│  ├─ Evaluate population 
 │  ├─ Sort by rank & crowding distance
-│  ├─ Create offspring (fixed Pm)
+│  ├─ Create offspring (fixed Pm) 
 │  ├─ Select next generation
 │  └─ (No adaptation)
 │

@@ -1,64 +1,64 @@
 === META-LEARNING KNOWLEDGE SUMMARY ===
 
-Total solutions learned: 91
+Total solutions learned: 108
 
 Model Performance Ranking:
 --------------------------------------------------
+RandomForest:
+  Average Accuracy: 0.9551
+  Times in Pareto Front: 3/3
+  Win Rate: 100.00%
+
 HistGradientBoosting:
-  Average Accuracy: 0.9520
-  Times in Pareto Front: 59/59
+  Average Accuracy: 0.9530
+  Times in Pareto Front: 69/69
   Win Rate: 100.00%
 
 MLP:
-  Average Accuracy: 0.9349
-  Times in Pareto Front: 1/1
-  Win Rate: 100.00%
-
-RandomForest:
-  Average Accuracy: 0.9305
-  Times in Pareto Front: 2/2
+  Average Accuracy: 0.9514
+  Times in Pareto Front: 5/5
   Win Rate: 100.00%
 
 SGD:
-  Average Accuracy: 0.9240
-  Times in Pareto Front: 27/27
+  Average Accuracy: 0.9229
+  Times in Pareto Front: 30/30
   Win Rate: 100.00%
 
 LogisticRegression:
-  Average Accuracy: 0.9186
-  Times in Pareto Front: 2/2
+  Average Accuracy: 0.9142
+  Times in Pareto Front: 1/1
   Win Rate: 100.00%
 
 
 Top 10 Solutions:
 --------------------------------------------------
 1. SGD
-   Accuracy: 0.9251, Size: 58
-   Fitness: 0.9311
+   Accuracy: 0.9273, Size: 58
+   Fitness: 0.9326
 
 2. SGD
-   Accuracy: 0.9251, Size: 58
-   Fitness: 0.9311
+   Accuracy: 0.9240, Size: 58
+   Fitness: 0.9304
 
 3. SGD
-   Accuracy: 0.9251, Size: 58
-   Fitness: 0.9311
+   Accuracy: 0.9240, Size: 58
+   Fitness: 0.9304
 
 4. SGD
-   Accuracy: 0.9251, Size: 58
-   Fitness: 0.9311
+   Accuracy: 0.9240, Size: 58
+   Fitness: 0.9304
 
 5. SGD
-   Accuracy: 0.9251, Size: 58
-   Fitness: 0.9311
+   Accuracy: 0.9240, Size: 58
+   Fitness: 0.9304
 
 6. SGD
-   Accuracy: 0.9251, Size: 58
-   Fitness: 0.9311
+   Accuracy: 0.9240, Size: 58
+   Fitness: 0.9304
 
 7. SGD
-   Accuracy: 0.9251, Size: 58
-   Fitness: 0.9311
+   Accuracy: 0.9240, Size: 58
+   Fitness: 0.9304
 
 8. SGD
    Accuracy: 0.9240, Size: 58

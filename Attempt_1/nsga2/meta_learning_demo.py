@@ -48,8 +48,19 @@ def hypervolume_indicator(front, ref_point=None):
     if not front:
         return 0.0
 
-    accs = [p['accuracy'] for p in front]
-    sizes = [p['size'] for p in front]
+    # Filter out points with infinite or invalid values
+    valid_front = []
+    for p in front:
+        acc = p['accuracy']
+        size = p['size']
+        if isinstance(acc, (int, float)) and isinstance(size, (int, float)) and not (np.isinf(acc) or np.isnan(acc) or np.isinf(size) or np.isnan(size)):
+            valid_front.append(p)
+    
+    if not valid_front:
+        return 0.0
+
+    accs = [p['accuracy'] for p in valid_front]
+    sizes = [p['size'] for p in valid_front]
 
     if ref_point is None:
         ref_point = (min(accs) - 0.1, max(sizes) + 1000)
@@ -57,7 +68,7 @@ def hypervolume_indicator(front, ref_point=None):
     ref_acc, ref_size = ref_point
 
     # Sort by size (minimize), ascending.
-    sorted_front = sorted(front, key=lambda x: x['size'])
+    sorted_front = sorted(valid_front, key=lambda x: x['size'])
 
     hv = 0.0
     best_acc = ref_acc
@@ -148,6 +159,12 @@ def run_baseline_vs_meta_learning(data_path, pop_size=15, generations=8, num_run
     print(f"\n✓ Baseline NSGA-II completed in {baseline_time:.2f}s")
     print(f"  - Pareto front size: {len(pareto_baseline)}")
     print(f"  - Hypervolume: {hv_baseline:.2f}")
+    if pareto_baseline:
+        print("  - Final Pareto Front:")
+        for i, p in enumerate(sorted(pareto_baseline, key=lambda x: x['accuracy'], reverse=True)):
+            print(f"    {i+1}. Accuracy: {p['accuracy']:.4f}, Size: {p['size']:.0f}")
+    else:
+        print("  - No valid Pareto front found.")
     
     # ============ RUN 2: Meta-Learning (warm-start + adaptive) ============
     print("\n" + "-"*70)
@@ -186,6 +203,12 @@ def run_baseline_vs_meta_learning(data_path, pop_size=15, generations=8, num_run
     print(f"\n✓ Meta-Learning NSGA-II completed in {meta_time:.2f}s")
     print(f"  - Pareto front size: {len(pareto_meta)}")
     print(f"  - Hypervolume: {hv_meta:.2f}")
+    if pareto_meta:
+        print("  - Final Pareto Front:")
+        for i, p in enumerate(sorted(pareto_meta, key=lambda x: x['accuracy'], reverse=True)):
+            print(f"    {i+1}. Accuracy: {p['accuracy']:.4f}, Size: {p['size']:.0f}")
+    else:
+        print("  - No valid Pareto front found.")
     
     # ============ RESULTS SUMMARY ============
     print("\n" + "="*70)
@@ -218,7 +241,7 @@ def run_baseline_vs_meta_learning(data_path, pop_size=15, generations=8, num_run
         print(f"ADDITIONAL RUNS: Demonstrating Meta-Knowledge Accumulation")
         print("="*70 + "\n")
         
-        for run_num in range(3, num_runs + 1):
+        for run_num in range(1, num_runs + 1):
             print(f"\nRun {run_num}: Meta-Learning NSGA-II (with accumulated meta-knowledge)")
             print("-"*70)
             
@@ -244,12 +267,19 @@ def run_baseline_vs_meta_learning(data_path, pop_size=15, generations=8, num_run
             results['meta_learning'].append({
                 'time': meta_time,
                 'pareto_size': len(pareto_meta),
-                'hypervolume': hv_meta
+                'hypervolume': hv_meta,
+                'Avg Accuracy': None
             })
             
             print(f"\n✓ Run {run_num} completed in {meta_time:.2f}s")
             print(f"  - Pareto front size: {len(pareto_meta)}")
             print(f"  - Hypervolume: {hv_meta:.2f}")
+            if pareto_meta:
+                print("  - Final Pareto Front:")
+                for i, p in enumerate(sorted(pareto_meta, key=lambda x: x['accuracy'], reverse=True)):
+                    print(f"    {i+1}. Accuracy: {p['accuracy']:.4f}, Size: {p['size']:.0f}")
+            else:
+                print("  - No valid Pareto front found.")
             print(f"  - Trend: {'↑' if hv_meta > results['meta_learning'][-2]['hypervolume'] else '↓'} Improving" 
                   if len(results['meta_learning']) > 1 else "  - First run (baseline)")
     

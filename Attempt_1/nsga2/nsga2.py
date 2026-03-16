@@ -2,7 +2,7 @@ import os
 import random
 import copy
 import warnings
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import pickle
 import numpy as np
 
@@ -91,6 +91,60 @@ def crowding_distance(front):
     if size_max != size_min:
         for i in range(1, l - 1):
             front[i]['cd'] += (front[i + 1]['size'] - front[i - 1]['size']) / (size_max - size_min)
+
+
+def compute_hypervolume(pareto_front, ref_point=None):
+    """
+    Compute the 2D hypervolume of a Pareto front.
+
+    This implementation assumes objectives:
+      - accuracy (maximize)
+      - size (minimize)
+
+    The hypervolume is computed exactly in 2D by sweeping along the size axis.
+    """
+    if not pareto_front:
+        return 0.0
+
+    # Filter out points with infinite or invalid values
+    valid_front = []
+    for p in pareto_front:
+        acc = p['accuracy']
+        size = p['size']
+        if isinstance(acc, (int, float)) and isinstance(size, (int, float)) and not (np.isinf(acc) or np.isnan(acc) or np.isinf(size) or np.isnan(size)):
+            valid_front.append(p)
+    
+    if not valid_front:
+        return 0.0
+
+    accs = [p['accuracy'] for p in valid_front]
+    sizes = [p['size'] for p in valid_front]
+
+    if ref_point is None:
+        ref_point = (min(accs) - 0.1, max(sizes) + 1000)
+
+    ref_acc, ref_size = ref_point
+
+    # Sort by size (minimize), ascending.
+    sorted_front = sorted(valid_front, key=lambda x: x['size'])
+
+    hv = 0.0
+    best_acc = ref_acc
+
+    for p in sorted_front:
+        acc = p['accuracy']
+        size = p['size']
+
+        # Only count if this point improves accuracy over previous points
+        if acc <= best_acc:
+            continue
+
+        width = max(0.0, ref_size - size)
+        height = acc - best_acc
+        hv += width * height
+        best_acc = acc
+
+    return hv
 
 
 def tournament_selection(pop, k=2):
@@ -317,6 +371,24 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
     final_pareto = [{'accuracy': ind['accuracy'], 'size': ind['size']} for ind in fronts[0]] if fronts else []
     pareto_history.append(final_pareto)
     
+    # Compute and print final metrics
+    if final_pareto:
+        avg_accuracy = np.mean([ind['accuracy'] for ind in final_pareto])
+        count_pareto = len(final_pareto)
+        avg_size = np.mean([ind['size'] for ind in final_pareto])
+        hypervolume = compute_hypervolume(final_pareto)
+        
+        print("\n" + "="*60)
+        print("FINAL PARETO FRONT METRICS")
+        print("="*60)
+        print(f"Average Accuracy: {avg_accuracy:.4f}")
+        print(f"Pareto Front Count: {count_pareto}")
+        print(f"Hypervolume: {hypervolume:.4f}")
+        print(f"Average Size: {avg_size:.0f}")
+        print("="*60)
+    else:
+        print("\nNo Pareto front found!")
+    
     # Add final front to meta-knowledge
     if fronts and fronts[0]:
         meta_learner.add_pareto_front(fronts[0], dataset_id=os.path.basename(data_path))
@@ -324,64 +396,64 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
         meta_learner.export_meta_knowledge_summary()
 
     # Plot progression
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    #fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     
     # Pareto front progression
-    ax = axes[0, 0]
-    cmap = plt.cm.viridis
+    #ax = axes[0, 0]
+    #cmap = plt.cm.viridis
     gens = len(pareto_history)
     for idx, pareto in enumerate(pareto_history):
         if not pareto:
             continue
         accs = [p['accuracy'] for p in pareto]
         sizes = [p['size'] for p in pareto]
-        ax.scatter(sizes, accs, color=cmap(idx / max(1, gens - 1)), label=f'gen {idx}', alpha=0.7, s=30)
-    ax.set_xlabel('Size (lower is better)')
-    ax.set_ylabel('Accuracy (higher is better)')
-    ax.set_title('Pareto-front Progression')
-    if gens <= 12:
-        ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize='small')
+        #ax.scatter(sizes, accs, color=cmap(idx / max(1, gens - 1)), label=f'gen {idx}', alpha=0.7, s=30)
+    # ax.set_xlabel('Size (lower is better)')
+    # ax.set_ylabel('Accuracy (higher is better)')
+    # ax.set_title('Pareto-front Progression')
+    # if gens <= 12:
+    #     ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize='small')
     
-    # Population diversity over generations
-    ax = axes[0, 1]
-    ax.plot(range(len(diversity_history)), diversity_history, marker='o', color='steelblue')
-    ax.set_xlabel('Generation')
-    ax.set_ylabel('Diversity')
-    ax.set_title('Population Diversity Evolution')
-    ax.grid(True, alpha=0.3)
+    # # Population diversity over generations
+    # ax = axes[0, 1]
+    # ax.plot(range(len(diversity_history)), diversity_history, marker='o', color='steelblue')
+    # ax.set_xlabel('Generation')
+    # ax.set_ylabel('Diversity')
+    # ax.set_title('Population Diversity Evolution')
+    # ax.grid(True, alpha=0.3)
     
     # Adaptive mutation rate over generations
-    ax = axes[1, 0]
-    ax.plot(range(len(mutation_history)), mutation_history, marker='s', color='coral')
-    ax.set_xlabel('Generation')
-    ax.set_ylabel('Mutation Rate (Pm)')
-    ax.set_title('Adaptive Mutation Rate')
-    ax.grid(True, alpha=0.3)
-    ax.axhline(y=pm, color='gray', linestyle='--', label=f'Base Pm={pm}')
-    ax.legend()
+    # ax = axes[1, 0]
+    # ax.plot(range(len(mutation_history)), mutation_history, marker='s', color='coral')
+    # ax.set_xlabel('Generation')
+    # ax.set_ylabel('Mutation Rate (Pm)')
+    # ax.set_title('Adaptive Mutation Rate')
+    # ax.grid(True, alpha=0.3)
+    # ax.axhline(y=pm, color='gray', linestyle='--', label=f'Base Pm={pm}')
+    # ax.legend()
     
-    # Pareto front size over generations
-    ax = axes[1, 1]
-    pf_sizes = [len(p) for p in pareto_history]
-    ax.plot(range(len(pf_sizes)), pf_sizes, marker='^', color='darkgreen')
-    ax.set_xlabel('Generation')
-    ax.set_ylabel('Pareto Front Size')
-    ax.set_title('Pareto Front Size Evolution')
-    ax.grid(True, alpha=0.3)
+    # # Pareto front size over generations
+    # ax = axes[1, 1]
+    # pf_sizes = [len(p) for p in pareto_history]
+    # ax.plot(range(len(pf_sizes)), pf_sizes, marker='^', color='darkgreen')
+    # ax.set_xlabel('Generation')
+    # ax.set_ylabel('Pareto Front Size')
+    # ax.set_title('Pareto Front Size Evolution')
+    # ax.grid(True, alpha=0.3)
     
-    plt.tight_layout()
-    if save_plot and plot_path:
-        plt.savefig(plot_path, dpi=150)
-        print(f"\n✓ Save visualization to {plot_path}")
+    # plt.tight_layout()
+    # if save_plot and plot_path:
+    #     plt.savefig(plot_path, dpi=150)
+    #     print(f"\n✓ Save visualization to {plot_path}")
 
-    if show_plot:
-        try:
-            plt.show()
-        except Exception:
-            pass
+    # if show_plot:
+    #     try:
+    #         plt.show()
+    #     except Exception:
+    #         pass
 
     # Close the figure to avoid memory buildup in long-running scripts
-    plt.close()
+    # plt.close()
 
     return pop
 

@@ -11,17 +11,6 @@ warnings.filterwarnings("ignore", category=ConvergenceWarning)
 class Trainer:
     def __init__(self, model, data, target_column='label', test_size=0.2, random_state=42, scale_data=True):
         
-        """
-        Train and evaluate a model
-        
-        Args:
-            model: Model instance (from Model class)
-            data: pandas DataFrame or path to CSV file
-            target_column: name of the target column (default: 'label')
-            test_size: proportion of test set (default: 0.2)
-            random_state: random seed (default: 42)
-            scale_data: whether to standardize features (default: True)
-        """
         # Store model
         self.model_instance = model
         self.model_name = model.getModelName()
