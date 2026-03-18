@@ -248,11 +248,14 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
     if data_path is None:
         raise ValueError("data_path must be provided")
     
-    # Set random seeds for reproducibility
+    # Set random seeds for reproducibility - do this FIRST and ONLY ONCE
     if seed is not None:
+        import os
+        os.environ['PYTHONHASHSEED'] = str(seed)  # Ensure hash-based operations are deterministic
         random.seed(seed)
         np.random.seed(seed)
         print(f"Random seed set to: {seed}")
+        print(f"First random numbers for verification: {random.random():.6f}, {np.random.random():.6f}")
     
     # Initialize meta-learner
     meta_learner = MetaLearner(meta_db_path=meta_db_path, seed=seed)
