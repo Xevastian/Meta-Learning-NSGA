@@ -12,6 +12,9 @@ class Model:
         if seed is not None:
             random.seed(seed)
             np.random.seed(seed)
+            self.__seed = seed
+        else:
+            self.__seed = None
         
         self.__modelName = model_name if model_name else random.choice(['MLP', 'RandomForest', 'HistGradientBoosting', 'LogisticRegression', 'SGD', 'KNeighbors'])
         self.__modelParams = {}
@@ -111,7 +114,7 @@ class Model:
             params['validation_fraction'] = 0.1
             params['n_iter_no_change'] = random.choice([5, 10, 20])
         
-        params['random_state'] = 42
+        params['random_state'] = self.__seed if self.__seed is not None else 42
         self.__modelParams = params
     
     def __MLPParameter(self):
@@ -133,7 +136,7 @@ class Model:
         params['early_stopping'] = True
         params['validation_fraction'] = 0.1
         params['n_iter_no_change'] = 10
-        params['random_state'] = 42
+        params['random_state'] = self.__seed if self.__seed is not None else 42
         
         self.__modelParams = params
     
@@ -155,7 +158,7 @@ class Model:
         
         params['max_samples'] = random.choice([None, 0.5, 0.7, 0.9]) if params['bootstrap'] else None
         params['criterion'] = random.choice(['gini', 'entropy', 'log_loss'])
-        params['random_state'] = 42
+        params['random_state'] = self.__seed if self.__seed is not None else 42
         params['n_jobs'] = -1  # Use all cores
         
         self.__modelParams = params
@@ -178,7 +181,7 @@ class Model:
             params['n_iter_no_change'] = random.choice([5, 10, 15, 20])
             params['tol'] = float(10 ** random.uniform(-5, -2))
         
-        params['random_state'] = 42
+        params['random_state'] = self.__seed if self.__seed is not None else 42
         
         self.__modelParams = params
     
@@ -207,7 +210,7 @@ class Model:
 
         params['max_iter'] = random.choice([100, 200, 500, 1000])
         params['tol'] = float(10 ** random.uniform(-5, -2))
-        params['random_state'] = 42
+        params['random_state'] = self.__seed if self.__seed is not None else 42
 
         # Do NOT set 'penalty' key to avoid FutureWarning / UserWarning
         self.__modelParams = params

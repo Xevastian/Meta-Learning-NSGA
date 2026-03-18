@@ -248,6 +248,12 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
     if data_path is None:
         raise ValueError("data_path must be provided")
     
+    # Set random seeds for reproducibility
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+        print(f"Random seed set to: {seed}")
+    
     # Initialize meta-learner
     meta_learner = MetaLearner(meta_db_path=meta_db_path, seed=seed)
     
@@ -267,9 +273,9 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
             print(f"✓ Warm-started with {len(population)} solutions from meta-knowledge\n")
         else:
             print("✗ No meta-knowledge available, using random initialization\n")
-            population = [Model() for _ in range(pop_size)]
+            population = [Model(seed=seed) for _ in range(pop_size)]
     else:
-        population = [Model() for _ in range(pop_size)]
+        population = [Model(seed=seed) for _ in range(pop_size)]
     
     pop = []
     for m in population:
