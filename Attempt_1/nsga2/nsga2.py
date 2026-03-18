@@ -224,7 +224,7 @@ def evaluate_model(model, data_path, verbose=False):
 
 
 def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto_progression.png', 
-          use_warm_start=True, meta_db_path='meta_knowledge.pkl', adaptive_operators=True, seed=None, 
+          use_warm_start=True, meta_db_path='meta_knowledge.pkl', adaptive_operators=True, seed=67, 
           save_plot=True, show_plot=True):
     """
     NSGA-II with meta-learning enhancements.
@@ -247,13 +247,6 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
     """
     if data_path is None:
         raise ValueError("data_path must be provided")
-    
-    # Set random seeds for reproducibility
-    if seed is not None:
-        import random
-        random.seed(seed)
-        np.random.seed(seed)
-        print(f"Random seed set to: {seed}")
     
     # Initialize meta-learner
     meta_learner = MetaLearner(meta_db_path=meta_db_path, seed=seed)
@@ -470,4 +463,4 @@ if __name__ == '__main__':
     use_adaptive = '--no-adaptive' not in sys.argv
     
     nsga2(pop_size=ps, generations=gens, data_path=data, 
-          use_warm_start=use_warm, adaptive_operators=use_adaptive)
+          use_warm_start=use_warm, adaptive_operators=use_adaptive, seed=67)
