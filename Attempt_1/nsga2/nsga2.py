@@ -224,7 +224,7 @@ def evaluate_model(model, data_path, verbose=False):
 
 
 def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto_progression.png', 
-          use_warm_start=True, meta_db_path='meta_knowledge.pkl', adaptive_operators=True, seed=67, 
+          use_warm_start=True, meta_db_path='meta_knowledge.pkl', adaptive_operators=True, seed=None, 
           save_plot=True, show_plot=True):
     """
     NSGA-II with meta-learning enhancements.
@@ -250,7 +250,6 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
     
     # Set random seeds for reproducibility - do this FIRST and ONLY ONCE
     if seed is not None:
-        import os
         os.environ['PYTHONHASHSEED'] = str(seed)  # Ensure hash-based operations are deterministic
         random.seed(seed)
         np.random.seed(seed)
@@ -472,4 +471,4 @@ if __name__ == '__main__':
     use_adaptive = '--no-adaptive' not in sys.argv
     
     nsga2(pop_size=ps, generations=gens, data_path=data, 
-          use_warm_start=use_warm, adaptive_operators=use_adaptive, seed=67)
+          use_warm_start=use_warm, adaptive_operators=use_adaptive, seed=None)

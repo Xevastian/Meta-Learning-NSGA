@@ -1,74 +1,69 @@
 === META-LEARNING KNOWLEDGE SUMMARY ===
 
-Total solutions learned: 108
+Total solutions learned: 101
 
 Model Performance Ranking:
 --------------------------------------------------
 RandomForest:
-  Average Accuracy: 0.9551
-  Times in Pareto Front: 3/3
-  Win Rate: 100.00%
-
-HistGradientBoosting:
-  Average Accuracy: 0.9530
-  Times in Pareto Front: 69/69
-  Win Rate: 100.00%
-
-MLP:
-  Average Accuracy: 0.9514
+  Average Accuracy: 0.9553
   Times in Pareto Front: 5/5
   Win Rate: 100.00%
 
-SGD:
-  Average Accuracy: 0.9229
-  Times in Pareto Front: 30/30
+HistGradientBoosting:
+  Average Accuracy: 0.9550
+  Times in Pareto Front: 29/29
+  Win Rate: 100.00%
+
+MLP:
+  Average Accuracy: 0.9424
+  Times in Pareto Front: 17/17
   Win Rate: 100.00%
 
 LogisticRegression:
-  Average Accuracy: 0.9142
-  Times in Pareto Front: 1/1
+  Average Accuracy: 0.9319
+  Times in Pareto Front: 50/50
   Win Rate: 100.00%
 
 
 Top 10 Solutions:
 --------------------------------------------------
-1. SGD
-   Accuracy: 0.9273, Size: 58
-   Fitness: 0.9326
+1. LogisticRegression
+   Accuracy: 0.9446, Size: 1168
+   Fitness: 0.7996
 
-2. SGD
-   Accuracy: 0.9240, Size: 58
-   Fitness: 0.9304
+2. LogisticRegression
+   Accuracy: 0.9446, Size: 1168
+   Fitness: 0.7996
 
-3. SGD
-   Accuracy: 0.9240, Size: 58
-   Fitness: 0.9304
+3. LogisticRegression
+   Accuracy: 0.9446, Size: 1168
+   Fitness: 0.7996
 
-4. SGD
-   Accuracy: 0.9240, Size: 58
-   Fitness: 0.9304
+4. LogisticRegression
+   Accuracy: 0.9446, Size: 1168
+   Fitness: 0.7996
 
-5. SGD
-   Accuracy: 0.9240, Size: 58
-   Fitness: 0.9304
+5. LogisticRegression
+   Accuracy: 0.9381, Size: 1168
+   Fitness: 0.7951
 
-6. SGD
-   Accuracy: 0.9240, Size: 58
-   Fitness: 0.9304
+6. LogisticRegression
+   Accuracy: 0.9381, Size: 1168
+   Fitness: 0.7951
 
-7. SGD
-   Accuracy: 0.9240, Size: 58
-   Fitness: 0.9304
+7. LogisticRegression
+   Accuracy: 0.9381, Size: 1168
+   Fitness: 0.7951
 
-8. SGD
-   Accuracy: 0.9240, Size: 58
-   Fitness: 0.9304
+8. LogisticRegression
+   Accuracy: 0.9381, Size: 1168
+   Fitness: 0.7951
 
-9. SGD
-   Accuracy: 0.9240, Size: 58
-   Fitness: 0.9304
+9. LogisticRegression
+   Accuracy: 0.9381, Size: 1168
+   Fitness: 0.7951
 
-10. SGD
-   Accuracy: 0.9240, Size: 58
-   Fitness: 0.9304
+10. LogisticRegression
+   Accuracy: 0.9381, Size: 1168
+   Fitness: 0.7951
 

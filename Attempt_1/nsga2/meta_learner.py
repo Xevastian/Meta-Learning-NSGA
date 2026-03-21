@@ -29,10 +29,6 @@ class MetaLearner:
             meta_db_path: Path to store meta-knowledge database
             seed: Random seed for reproducibility
         """
-        # Set random seed for reproducibility
-        if seed is not None:
-            np.random.seed(seed)
-        
         self.meta_db_path = meta_db_path
         self.meta_knowledge = {
             'solutions': [],  # List of good solutions
