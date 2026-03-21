@@ -2,45 +2,36 @@
   {
     "name": "LogisticRegression",
     "params": {
-      "l1_ratio": 1.0,
+      "l1_ratio": 0.0,
+      "C": Infinity,
       "solver": "saga",
-      "C": 0.005844351911788381,
-      "max_iter": 927,
-      "tol": 2.334485946090062e-06,
+      "max_iter": 93,
+      "tol": 1.0017672324848084e-06,
       "random_state": null
     },
-    "accuracy": 0.9305103148751357,
+    "accuracy": 0.9413680781758957,
     "size": 1162.0
   },
   {
-    "name": "LogisticRegression",
+    "name": "MLP",
     "params": {
-      "l1_ratio": 0.0,
-      "solver": "newton-cg",
-      "C": 501.1405325027802,
-      "max_iter": 1143,
-      "tol": 0.0005023563067135966,
+      "hidden_layer_sizes": [
+        103,
+        51
+      ],
+      "activation": "relu",
+      "solver": "adam",
+      "alpha": 1.2683303634349728e-05,
+      "learning_rate": "constant",
+      "learning_rate_init": 0.0007096262845802749,
+      "batch_size": 248,
+      "max_iter": 698,
+      "early_stopping": true,
+      "validation_fraction": 0.1,
+      "n_iter_no_change": 10,
       "random_state": null
     },
-    "accuracy": 0.9446254071661238,
-    "size": 1168.0
-  },
-  {
-    "name": "RandomForest",
-    "params": {
-      "n_estimators": 412,
-      "max_depth": 16,
-      "min_samples_split": 17,
-      "min_samples_leaf": 9,
-      "max_features": 0.4022173677967694,
-      "bootstrap": false,
-      "oob_score": false,
-      "max_samples": null,
-      "criterion": "log_loss",
-      "random_state": null,
-      "n_jobs": -1
-    },
-    "accuracy": 0.9457111834961998,
-    "size": 2131445.0
+    "accuracy": 0.9478827361563518,
+    "size": 218835.0
   }
 ]
