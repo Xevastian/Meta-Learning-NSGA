@@ -1,5 +1,3 @@
-# Example usage of MetaLearningNSGA2
-
 from nsga2 import MetaLearningNSGA2
 
 def main():
