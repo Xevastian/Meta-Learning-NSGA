@@ -270,6 +270,9 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
     print(f"Adaptive operators: {adaptive_operators}")
     print("="*60 + "\n")
     
+    def draw_model_seed():
+        return random.randint(0, 2**31 - 2)
+
     if use_warm_start:
         print("Initializing population with meta-knowledge...")
         warm_pop = meta_learner.get_warm_start_population(pop_size)
@@ -278,9 +281,9 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
             print(f"✓ Warm-started with {len(population)} solutions from meta-knowledge\n")
         else:
             print("✗ No meta-knowledge available, using random initialization\n")
-            population = [Model(seed=seed) for _ in range(pop_size)]
+            population = [Model(seed=draw_model_seed()) for _ in range(pop_size)]
     else:
-        population = [Model(seed=seed) for _ in range(pop_size)]
+        population = [Model(seed=draw_model_seed()) for _ in range(pop_size)]
     
     pop = []
     for m in population:
@@ -292,6 +295,19 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
     diversity_history = []
     
     current_pm = pm  # Adaptive mutation rate
+
+    # Seed revolution initialization: base seed acts as key for subsequent seeds
+    if seed is None:
+        seed = 67
+        print("No seed provided, using default seed 67")
+    current_seed = int(seed) % (2**31 - 1)
+    print(f"Seed key start: {current_seed}")
+
+    random.seed(current_seed)
+    np.random.seed(current_seed)
+
+    def draw_model_seed():
+        return random.randint(0, 2**31 - 2)
 
     for gen in range(generations):
         # Non-dominated sorting
@@ -305,6 +321,12 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
         if adaptive_operators:
             current_pm = meta_learner.get_adaptive_mutation_rate(diversity)
         
+        # Evolve seed each generation; seed is the revolution key
+        current_seed = (current_seed * 1103515245 + 12345 + gen + int(diversity * 1000)) % (2**31 - 1)
+        random.seed(current_seed)
+        np.random.seed(current_seed)
+        print(f"Revolution seed key (gen {gen + 1}): {current_seed}")
+
         mutation_history.append(current_pm)
 
         # --- Print Pareto front for this generation ---
@@ -491,13 +513,25 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
 if __name__ == '__main__':
     import sys
     if len(sys.argv) < 2:
-        print("Usage: python nsga2.py <data_path> [pop_size] [generations] [--no-warm-start] [--no-adaptive]")
+        print("Usage: python nsga2.py <data_path> [pop_size] [generations] [--no-warm-start] [--no-adaptive] [--seed <int>]")
         sys.exit(1)
+
     data = sys.argv[1]
-    ps = int(sys.argv[2]) if len(sys.argv) >= 3 else 20
-    gens = int(sys.argv[3]) if len(sys.argv) >= 4 else 10
+    ps = int(sys.argv[2]) if len(sys.argv) >= 3 and sys.argv[2].isdigit() else 20
+    gens = int(sys.argv[3]) if len(sys.argv) >= 4 and sys.argv[3].isdigit() else 10
     use_warm = '--no-warm-start' not in sys.argv
     use_adaptive = '--no-adaptive' not in sys.argv
-    
-    nsga2(pop_size=ps, generations=gens, data_path=data, 
-          use_warm_start=use_warm, adaptive_operators=use_adaptive, seed=None)
+
+    seed = None
+    if '--seed' in sys.argv:
+        try:
+            idx = sys.argv.index('--seed')
+            if idx + 1 < len(sys.argv):
+                seed = int(sys.argv[idx + 1])
+        except ValueError:
+            seed = None
+    elif len(sys.argv) >= 5 and sys.argv[4].isdigit():
+        seed = int(sys.argv[4])
+
+    nsga2(pop_size=ps, generations=gens, data_path=data,
+          use_warm_start=use_warm, adaptive_operators=use_adaptive, seed=seed)

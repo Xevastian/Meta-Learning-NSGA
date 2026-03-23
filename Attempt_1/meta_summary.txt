@@ -1,69 +1,64 @@
 === META-LEARNING KNOWLEDGE SUMMARY ===
 
-Total solutions learned: 34
+Total solutions learned: 21
 
 Model Performance Ranking:
 --------------------------------------------------
 HistGradientBoosting:
-  Average Accuracy: 0.9531
-  Times in Pareto Front: 6/6
+  Average Accuracy: 0.9583
+  Times in Pareto Front: 10/10
   Win Rate: 100.00%
 
 MLP:
-  Average Accuracy: 0.9473
-  Times in Pareto Front: 9/9
-  Win Rate: 100.00%
-
-SGD:
-  Average Accuracy: 0.9355
-  Times in Pareto Front: 9/9
+  Average Accuracy: 0.9310
+  Times in Pareto Front: 7/7
   Win Rate: 100.00%
 
 LogisticRegression:
-  Average Accuracy: 0.9194
-  Times in Pareto Front: 10/10
+  Average Accuracy: 0.9297
+  Times in Pareto Front: 4/4
   Win Rate: 100.00%
 
 
 Top 10 Solutions:
 --------------------------------------------------
 1. LogisticRegression
-   Accuracy: 0.9425, Size: 1162
-   Fitness: 0.7985
+   Accuracy: 0.9338, Size: 1163
+   Fitness: 0.7923
 
 2. LogisticRegression
-   Accuracy: 0.9425, Size: 1162
-   Fitness: 0.7985
+   Accuracy: 0.9283, Size: 1163
+   Fitness: 0.7885
 
 3. LogisticRegression
-   Accuracy: 0.9425, Size: 1162
-   Fitness: 0.7985
+   Accuracy: 0.9283, Size: 1163
+   Fitness: 0.7885
 
 4. LogisticRegression
-   Accuracy: 0.9425, Size: 1162
-   Fitness: 0.7985
+   Accuracy: 0.9283, Size: 1163
+   Fitness: 0.7885
 
-5. LogisticRegression
-   Accuracy: 0.9392, Size: 1163
-   Fitness: 0.7961
+5. HistGradientBoosting
+   Accuracy: 0.9674, Size: 2099000
+   Fitness: 0.6773
 
-6. LogisticRegression
-   Accuracy: 0.9392, Size: 1163
-   Fitness: 0.7961
+6. HistGradientBoosting
+   Accuracy: 0.9674, Size: 2099000
+   Fitness: 0.6773
 
-7. LogisticRegression
-   Accuracy: 0.9359, Size: 1162
-   Fitness: 0.7939
+7. HistGradientBoosting
+   Accuracy: 0.9587, Size: 955328
+   Fitness: 0.6714
 
-8. LogisticRegression
-   Accuracy: 0.9294, Size: 1163
-   Fitness: 0.7893
+8. HistGradientBoosting
+   Accuracy: 0.9587, Size: 955328
+   Fitness: 0.6714
 
-9. LogisticRegression
-   Accuracy: 0.9294, Size: 1163
-   Fitness: 0.7893
+9. HistGradientBoosting
+   Accuracy: 0.9587, Size: 955328
+   Fitness: 0.6714
 
-10. SGD
-   Accuracy: 0.9435, Size: 1407
-   Fitness: 0.7851
+10. HistGradientBoosting
+   Accuracy: 0.9544, Size: 195366
+   Fitness: 0.6696
 
