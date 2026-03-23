@@ -5,6 +5,7 @@ import warnings
 # import matplotlib.pyplot as plt
 import pickle
 import numpy as np
+import time
 
 # Import modules with fallbacks for relative imports
 try:
@@ -245,6 +246,8 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
     Returns:
         Final population
     """
+    start_time = time.time()  # Start timing
+    
     if data_path is None:
         raise ValueError("data_path must be provided")
     
@@ -395,6 +398,11 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
         meta_learner.add_pareto_front(fronts[0], dataset_id=os.path.basename(data_path))
         meta_learner.save_meta_knowledge()
         meta_learner.export_meta_knowledge_summary()
+
+    # Print runtime
+    end_time = time.time()
+    total_runtime = end_time - start_time
+    print(f"\nTotal Runtime: {total_runtime:.2f} seconds")
 
     # Plot progression
     #fig, axes = plt.subplots(2, 2, figsize=(14, 10))
