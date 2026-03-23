@@ -383,6 +383,27 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
         hypervolume = compute_hypervolume(final_pareto)
         
         print("\n" + "="*60)
+        print("FINAL PARETO FRONT SOLUTIONS")
+        print("="*60)
+        
+        for i, ind in enumerate(final_pareto, 1):
+            try:
+                name = ind['model'].getModelName()
+            except Exception:
+                name = "Model"
+            
+            try:
+                params = ind['model'].getModelParams()
+            except Exception:
+                params = {}
+            
+            print(f"\nSolution {i}: {name}")
+            print(f"  Accuracy: {ind['accuracy']:.4f}")
+            print(f"  Size: {ind['size']:.0f} parameters")
+            if params:
+                print(f"  Configuration: {params}")
+        
+        print("\n" + "="*60)
         print("FINAL PARETO FRONT METRICS")
         print("="*60)
         print(f"Average Accuracy: {avg_accuracy:.4f}")
