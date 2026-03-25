@@ -297,6 +297,13 @@ def nsga2(pop_size=20, generations=10, pm=0.3, pc=0.9, data_path=None, plot_path
     random.seed(base_seed)
     np.random.seed(base_seed)
 
+    # Strong determinism: force single-threaded BLAS/OpenMP.
+    # This reduces run-to-run nondeterminism in sklearn training kernels.
+    os.environ['OMP_NUM_THREADS'] = '1'
+    os.environ['MKL_NUM_THREADS'] = '1'
+    os.environ['OPENBLAS_NUM_THREADS'] = '1'
+    os.environ['NUMEXPR_NUM_THREADS'] = '1'
+
     print(f"Random seed set to: {seed} (base_seed={base_seed})")
     print(f"First random numbers for verification: {random.random():.6f}, {np.random.random():.6f}")
 

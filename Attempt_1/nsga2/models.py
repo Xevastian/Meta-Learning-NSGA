@@ -174,6 +174,8 @@ class LogisticRegressionModel(ModelType):
         if 'l1_ratio' in params:
             params['l1_ratio'] = max(0.0, min(1.0, params['l1_ratio']))
         params['random_state'] = seed
+        # Determinism: avoid internal parallelism.
+        params['n_jobs'] = 1
         
         return params
 
