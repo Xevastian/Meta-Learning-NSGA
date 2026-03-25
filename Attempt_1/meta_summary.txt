@@ -1,74 +1,59 @@
 === META-LEARNING KNOWLEDGE SUMMARY ===
 
-Total solutions learned: 57
+Total solutions learned: 19
 
 Model Performance Ranking:
 --------------------------------------------------
-HistGradientBoosting:
-  Average Accuracy: 0.9446
-  Times in Pareto Front: 5/5
-  Win Rate: 100.00%
-
-RandomForest:
-  Average Accuracy: 0.9334
-  Times in Pareto Front: 13/13
-  Win Rate: 100.00%
-
 MLP:
-  Average Accuracy: 0.9300
-  Times in Pareto Front: 4/4
-  Win Rate: 100.00%
-
-SGD:
-  Average Accuracy: 0.9111
-  Times in Pareto Front: 12/12
+  Average Accuracy: 0.9479
+  Times in Pareto Front: 8/8
   Win Rate: 100.00%
 
 LogisticRegression:
-  Average Accuracy: 0.8068
-  Times in Pareto Front: 23/23
+  Average Accuracy: 0.9302
+  Times in Pareto Front: 11/11
   Win Rate: 100.00%
 
 
 Top 10 Solutions:
 --------------------------------------------------
 1. LogisticRegression
-   Accuracy: 0.9186, Size: 1154
-   Fitness: 0.7823
+   Accuracy: 0.9392, Size: 1167
+   Fitness: 0.7959
 
 2. LogisticRegression
-   Accuracy: 0.9175, Size: 1155
-   Fitness: 0.7814
+   Accuracy: 0.9392, Size: 1167
+   Fitness: 0.7959
 
 3. LogisticRegression
-   Accuracy: 0.9175, Size: 1155
-   Fitness: 0.7814
+   Accuracy: 0.9392, Size: 1167
+   Fitness: 0.7959
 
 4. LogisticRegression
-   Accuracy: 0.9175, Size: 1155
-   Fitness: 0.7814
+   Accuracy: 0.9392, Size: 1167
+   Fitness: 0.7959
 
 5. LogisticRegression
-   Accuracy: 0.9175, Size: 1155
-   Fitness: 0.7814
+   Accuracy: 0.9251, Size: 1159
+   Fitness: 0.7865
 
 6. LogisticRegression
-   Accuracy: 0.9175, Size: 1155
-   Fitness: 0.7814
+   Accuracy: 0.9251, Size: 1159
+   Fitness: 0.7865
 
 7. LogisticRegression
-   Accuracy: 0.9175, Size: 1155
-   Fitness: 0.7814
+   Accuracy: 0.9251, Size: 1159
+   Fitness: 0.7865
 
 8. LogisticRegression
-   Accuracy: 0.9175, Size: 1155
-   Fitness: 0.7814
+   Accuracy: 0.9251, Size: 1159
+   Fitness: 0.7865
 
 9. LogisticRegression
-   Accuracy: 0.9175, Size: 1155
-   Fitness: 0.7814
+   Accuracy: 0.9251, Size: 1159
+   Fitness: 0.7865
 
 10. LogisticRegression
-   Accuracy: 0.9175, Size: 1155
-   Fitness: 0.7814
+   Accuracy: 0.9251, Size: 1159
+   Fitness: 0.7865
 

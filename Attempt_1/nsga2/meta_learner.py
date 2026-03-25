@@ -195,7 +195,14 @@ class MetaLearner:
         if len(self.meta_knowledge['solutions']) > 1000:
             self.meta_knowledge['solutions'] = self.meta_knowledge['solutions'][-1000:]
     
-    def get_warm_start_population(self, pop_size, prefer_models=None, dataset_id=None, dataset_signature=None):
+    def get_warm_start_population(
+        self,
+        pop_size,
+        prefer_models=None,
+        dataset_id=None,
+        dataset_signature=None,
+        dataset_similarity_threshold=0.7
+    ):
         """
         Generate warm-start population from meta-knowledge with dataset-aware filtering.
 
@@ -210,6 +217,23 @@ class MetaLearner:
         """
         if not self.meta_knowledge['solutions']:
             return None
+
+        # Similarity gate: only warm-start if current dataset looks similar to something stored.
+        # If the dataset_id exists in stored signatures, treat it as a match.
+        stored_signatures = self.meta_knowledge.get('dataset_signatures', {}) or {}
+        if dataset_id and dataset_id in stored_signatures:
+            pass  # direct match => allow warm-start
+        else:
+            # If we can't compute similarity, be conservative and disable warm-start.
+            if dataset_signature is None:
+                return None
+
+            best_sim = 0.0
+            for _, hist_sig in stored_signatures.items():
+                sim = self._dataset_signature_similarity(dataset_signature, hist_sig)
+                best_sim = max(best_sim, sim)
+            if best_sim < dataset_similarity_threshold:
+                return None
 
         # Filter solutions by preferred models
         solutions = self.meta_knowledge['solutions']

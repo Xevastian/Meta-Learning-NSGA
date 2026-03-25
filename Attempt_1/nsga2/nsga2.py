@@ -256,6 +256,7 @@ def nsga2(pop_size=20, generations=10, pm=0.3, pc=0.9, data_path=None, plot_path
           use_warm_start=True, meta_db_path='meta_knowledge.pkl', adaptive_operators=True, seed=None,
           update_meta_db=True,
           hv_ref_point=(0.0, 1e12),
+          dataset_similarity_threshold=0.7,
           save_plot=True, show_plot=True):
     """
     NSGA-II with meta-learning enhancements.
@@ -318,9 +319,12 @@ def nsga2(pop_size=20, generations=10, pm=0.3, pc=0.9, data_path=None, plot_path
 
     if use_warm_start:
         print("Initializing population with meta-knowledge...")
-        warm_pop = meta_learner.get_warm_start_population(pop_size,
-                                                          dataset_id=dataset_id,
-                                                          dataset_signature=dataset_signature)
+        warm_pop = meta_learner.get_warm_start_population(
+            pop_size,
+            dataset_id=dataset_id,
+            dataset_signature=dataset_signature,
+            dataset_similarity_threshold=dataset_similarity_threshold
+        )
         if warm_pop:
             population = warm_pop
             print(f"[OK] Warm-started with {len(population)} solutions from meta-knowledge\n")
@@ -346,7 +350,7 @@ def nsga2(pop_size=20, generations=10, pm=0.3, pc=0.9, data_path=None, plot_path
     def draw_model_seed():
         return random.randint(0, 2**31 - 2)
 
-    def crossover_models(parent_a, parent_b):
+    def crossover_models(parent_a, parent_b, child_seed=None):
         """
         Simple crossover operator over the hyperparameter dictionaries.
 
@@ -369,12 +373,12 @@ def nsga2(pop_size=20, generations=10, pm=0.3, pc=0.9, data_path=None, plot_path
                     child_params[k] = params_a[k]
                 else:
                     child_params[k] = params_b[k]
-            return Model.from_solution(name_a, child_params)
+            return Model.from_solution(name_a, child_params, seed=child_seed)
 
         # Type-level crossover: pick one parent's model as-is.
         if random.random() < 0.5:
-            return Model.from_solution(name_a, params_a)
-        return Model.from_solution(name_b, params_b)
+            return Model.from_solution(name_a, params_a, seed=child_seed)
+        return Model.from_solution(name_b, params_b, seed=child_seed)
 
     for gen in range(generations):
         generation_seed = (base_seed + gen) % (2**31 - 1)
@@ -432,14 +436,19 @@ def nsga2(pop_size=20, generations=10, pm=0.3, pc=0.9, data_path=None, plot_path
             parent1 = p1['model']
             parent2 = p2['model']
 
+            # Determinism: give each child a deterministic internal seed so that
+            # any stochastic sklearn training during mutation is repeatable.
+            child_seed_1 = draw_model_seed()
+            child_seed_2 = draw_model_seed()
+
             # Crossover (with probability pc)
             if random.random() < pc:
-                child1 = crossover_models(parent1, parent2)
-                child2 = crossover_models(parent2, parent1)
+                child1 = crossover_models(parent1, parent2, child_seed=child_seed_1)
+                child2 = crossover_models(parent2, parent1, child_seed=child_seed_2)
             else:
                 # Clone parents via params to avoid carrying trained estimator state.
-                child1 = Model.from_solution(parent1.getModelName(), parent1.getModelParams())
-                child2 = Model.from_solution(parent2.getModelName(), parent2.getModelParams())
+                child1 = Model.from_solution(parent1.getModelName(), parent1.getModelParams(), seed=child_seed_1)
+                child2 = Model.from_solution(parent2.getModelName(), parent2.getModelParams(), seed=child_seed_2)
 
             # Mutation (with probability = current_pm)
             child1.mutate(current_pm)
@@ -590,7 +599,7 @@ def nsga2(pop_size=20, generations=10, pm=0.3, pc=0.9, data_path=None, plot_path
 if __name__ == '__main__':
     import sys
     if len(sys.argv) < 2:
-        print("Usage: python nsga2.py <data_path> [pop_size] [generations] [--no-warm-start] [--no-adaptive] [--seed <int>]")
+        print("Usage: python nsga2.py <data_path> [pop_size] [generations] [--no-warm-start] [--no-adaptive] [--seed <int>] [--warm-start-sim-threshold <float>]")
         sys.exit(1)
 
     data = sys.argv[1]
@@ -599,6 +608,15 @@ if __name__ == '__main__':
     use_warm = '--no-warm-start' not in sys.argv
     use_adaptive = '--no-adaptive' not in sys.argv
     update_meta_db = '--no-meta-update' not in sys.argv
+    warm_start_sim_threshold = 0.7
+
+    if '--warm-start-sim-threshold' in sys.argv:
+        try:
+            idx = sys.argv.index('--warm-start-sim-threshold')
+            if idx + 1 < len(sys.argv):
+                warm_start_sim_threshold = float(sys.argv[idx + 1])
+        except Exception:
+            warm_start_sim_threshold = 0.7
 
     seed = None
     if '--seed' in sys.argv:
@@ -612,4 +630,5 @@ if __name__ == '__main__':
         seed = int(sys.argv[4])
 
     nsga2(pop_size=ps, generations=gens, data_path=data,
-          use_warm_start=use_warm, adaptive_operators=use_adaptive, seed=seed, update_meta_db=update_meta_db)
+          use_warm_start=use_warm, adaptive_operators=use_adaptive, seed=seed,
+          update_meta_db=update_meta_db, dataset_similarity_threshold=warm_start_sim_threshold)
