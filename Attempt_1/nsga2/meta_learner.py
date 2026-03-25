@@ -3,6 +3,7 @@ import pickle
 import os
 from collections import defaultdict
 import numpy as np
+import pandas as pd
 
 # Import with fallback
 try:
@@ -44,20 +45,111 @@ class MetaLearner:
             try:
                 with open(self.meta_db_path, 'rb') as f:
                     self.meta_knowledge = pickle.load(f)
-                print(f"Loaded meta-knowledge with {len(self.meta_knowledge['solutions'])} solutions")
+                print(f"[OK] Loaded meta-knowledge with {len(self.meta_knowledge['solutions'])} solutions")
             except Exception as e:
                 print(f"Error loading meta-knowledge: {e}. Starting fresh.")
+
+    def compute_dataset_signature(self, data_path):
+        """Compute lightweight dataset signature to compare dataset similarity."""
+        try:
+            import pandas as pd
+            df = pd.read_csv(data_path)
+            n_samples, n_features = df.shape
+            if 'label' in df.columns:
+                labels = df['label']
+            else:
+                labels = df.iloc[:, -1]
+            flag = labels.value_counts(normalize=True)
+            # entropy for class balance
+            class_entropy = -sum([p * np.log(p + 1e-12) for p in flag.values])
+            # number of classes
+            n_classes = flag.shape[0]
+            signature = {
+                'n_samples': float(n_samples),
+                'n_features': float(n_features - 1),
+                'n_classes': float(n_classes),
+                'class_entropy': float(class_entropy),
+                'class_balance': float(flag.max())
+            }
+            return signature
+        except Exception as e:
+            print(f"Warning: failed to compute dataset signature: {e}")
+            return None
+
+    def _signature_distance(self, sig_a, sig_b):
+        """Compute normalized distance between two dataset signatures."""
+        if not sig_a or not sig_b:
+            return float('inf')
+        keys = ['n_samples', 'n_features', 'n_classes', 'class_entropy', 'class_balance']
+        diffs = []
+        for k in keys:
+            a = sig_a.get(k, 0.0)
+            b = sig_b.get(k, 0.0)
+            maxv = max(abs(a), abs(b), 1.0)
+            diffs.append(((a - b) / maxv) ** 2)
+        return float(np.sqrt(sum(diffs)))
     
     def save_meta_knowledge(self):
         """Save meta-knowledge to disk."""
         try:
             with open(self.meta_db_path, 'wb') as f:
                 pickle.dump(self.meta_knowledge, f)
-            print(f"Saved meta-knowledge with {len(self.meta_knowledge['solutions'])} solutions")
+            print(f"[OK] Saved meta-knowledge with {len(self.meta_knowledge['solutions'])} solutions")
         except Exception as e:
             print(f"Error saving meta-knowledge: {e}")
-    
-    def add_pareto_front(self, pareto_front, dataset_id=None):
+
+    def compute_dataset_signature(self, data_path):
+        """Compute dataset signature for similarity-based warm-start."""
+        try:
+            df = pd.read_csv(data_path) if isinstance(data_path, str) else data_path.copy()
+            if 'label' not in df.columns:
+                raise ValueError("Dataset must contain 'label' column")
+
+            X = df.drop('label', axis=1)
+            y = df['label']
+
+            value_counts = y.value_counts(normalize=True).to_dict()
+            entropy = -sum(p * np.log2(p) for p in value_counts.values() if p > 0)
+
+            signature = {
+                'n_samples': int(df.shape[0]),
+                'n_features': int(X.shape[1]),
+                'n_classes': int(y.nunique()),
+                'class_entropy': float(entropy)
+            }
+            return signature
+        except Exception as e:
+            print(f"Error computing dataset signature: {e}")
+            return None
+
+    @staticmethod
+    def _dataset_signature_similarity(sig_a, sig_b):
+        """Compute similarity score in [0,1] (1 = identical)."""
+        if not sig_a or not sig_b:
+            return 0.0
+
+        # Weights for each component
+        weights = {
+            'n_samples': 0.2,
+            'n_features': 0.3,
+            'n_classes': 0.3,
+            'class_entropy': 0.2
+        }
+        score = 0.0
+        for key, w in weights.items():
+            a = sig_a.get(key)
+            b = sig_b.get(key)
+            if a is None or b is None:
+                continue
+            if a == b:
+                score += w
+            else:
+                diff = abs(a - b) / max(1.0, max(a, b))
+                score += w * max(0.0, 1.0 - diff)
+
+        return min(1.0, score)
+
+    def add_pareto_front(self, pareto_front, dataset_id=None, dataset_signature=None):
         """
         Add solutions from a Pareto front to meta-knowledge.
         
@@ -95,62 +187,79 @@ class MetaLearner:
             except Exception as e:
                 print(f"Error adding solution to meta-knowledge: {e}")
         
+        # Store dataset signature if available for later similarity matching
+        if dataset_id and dataset_signature:
+            self.meta_knowledge['dataset_signatures'][dataset_id] = dataset_signature
+
         # Keep recent solutions (bounded memory)
         if len(self.meta_knowledge['solutions']) > 1000:
             self.meta_knowledge['solutions'] = self.meta_knowledge['solutions'][-1000:]
     
-    def get_warm_start_population(self, pop_size, prefer_models=None):
+    def get_warm_start_population(self, pop_size, prefer_models=None, dataset_id=None, dataset_signature=None):
         """
-        Generate warm-start population from meta-knowledge.
-        
+        Generate warm-start population from meta-knowledge with dataset-aware filtering.
+
         Args:
             pop_size: Size of population to generate
             prefer_models: List of model names to prefer (None = all models)
-        
+            dataset_id: Identifier for current dataset
+            dataset_signature: Numeric signature for current dataset
+
         Returns:
             List of Model instances with high-fitness parameter configurations
         """
         if not self.meta_knowledge['solutions']:
             return None
-        
+
         # Filter solutions by preferred models
         solutions = self.meta_knowledge['solutions']
         if prefer_models:
             solutions = [s for s in solutions if s['model_name'] in prefer_models]
-        
         if not solutions:
             solutions = self.meta_knowledge['solutions']
-        
-        # Sort by fitness (higher is better)
-        solutions = sorted(solutions, key=lambda x: x['fitness'], reverse=True)
-        
+
+        # Score solutions by fitness + dataset similarity
+        scored_solutions = []
+        for s in solutions:
+            dataset_score = 0.0
+            if dataset_id and s.get('dataset_id') == dataset_id:
+                dataset_score = 1.0
+            elif dataset_signature and s.get('dataset_id') in self.meta_knowledge['dataset_signatures']:
+                historical_sig = self.meta_knowledge['dataset_signatures'][s.get('dataset_id')]
+                dataset_score = self._dataset_signature_similarity(dataset_signature, historical_sig)
+
+            combined_score = 0.6 * s['fitness'] + 0.4 * dataset_score
+            scored_solutions.append((combined_score, s))
+
+        scored_solutions.sort(key=lambda x: x[0], reverse=True)
+
+        top_solutions = [s for _, s in scored_solutions]
+
         # Sample top solutions with some randomness (explore-exploit balance)
         n_elite = max(1, pop_size // 3)
-        elite_solutions = solutions[:n_elite]
-        other_solutions = solutions[n_elite:]
-        
+        elite_solutions = top_solutions[:n_elite]
+        other_solutions = top_solutions[n_elite:]
+
         population = []
-        
+
         # Add elite solutions
         for _ in range(min(len(elite_solutions), pop_size // 2)):
             sol = np.random.choice(elite_solutions)
             model = self._create_model_from_solution(sol)
             if model:
                 population.append(model)
-        
+
         # Add exploration samples from other solutions
         for _ in range(pop_size - len(population)):
             if np.random.random() < 0.7 and other_solutions:
-                # Use meta-knowledge
                 sol = np.random.choice(other_solutions)
                 model = self._create_model_from_solution(sol, add_noise=True)
             else:
-                # Random model for exploration
                 model = Model()
-            
+
             if model:
                 population.append(model)
-        
+
         return population[:pop_size]
     
     def get_best_model_type(self, dataset_id=None):
@@ -251,26 +360,29 @@ class MetaLearner:
     def _create_model_from_solution(self, solution, add_noise=False):
         """
         Create a Model instance from a stored solution.
-        
+
         Args:
             solution: Solution dict with 'model_name' and 'params'
             add_noise: If True, slightly perturb parameters for variation
-        
+
         Returns:
             Model instance
         """
         try:
-            model = Model(model_name=solution['model_name'])
-            params = solution['params'].copy()
-            
+            params = solution.get('params', {}) or {}
+            params = params.copy()
+
             if add_noise:
-                # Add small perturbation to some parameters
-                for key in list(params.keys())[:2]:  # Perturb 2 random params
-                    if isinstance(params[key], (int, float)):
-                        params[key] = params[key] * np.random.uniform(0.9, 1.1)
-            
-            # Note: We can't directly set params, but the model is initialized
-            # with the correct model_name
+                # Add small perturbation to a few numeric parameters
+                for key in list(params.keys())[:2]:
+                    if isinstance(params[key], (int, float)) and not isinstance(params[key], bool):
+                        params[key] = type(params[key])(max(1e-8, params[key] * np.random.uniform(0.9, 1.1)))
+
+            if params:
+                model = Model.from_solution(solution['model_name'], params)
+            else:
+                model = Model(model_name=solution['model_name'])
+
             return model
         except Exception as e:
             print(f"Error creating model from solution: {e}")

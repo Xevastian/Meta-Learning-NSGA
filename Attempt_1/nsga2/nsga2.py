@@ -13,7 +13,6 @@ try:
     from .trainer import Trainer
     from .meta_learner import MetaLearner
 except ImportError:
-    # Fallback for when run as script
     from models import Model
     from trainer import Trainer
     from meta_learner import MetaLearner
@@ -168,10 +167,10 @@ def tournament_selection(pop, k=2):
     return competitors[0]
 
 
-def evaluate_model(model, data_path, verbose=False):
+def evaluate_model(model, data_path, verbose=False, random_state=42):
     """Train model via Trainer and return (accuracy, size). Print model info and serialized size when verbose=True."""
     try:
-        trainer = Trainer(model, data_path)
+        trainer = Trainer(model, data_path, random_state=random_state)
         acc = float(trainer.getAccuracy())
         size = float(trainer.getSize())
 
@@ -224,8 +223,39 @@ def evaluate_model(model, data_path, verbose=False):
         return 0.0, 1e9
 
 
-def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto_progression.png', 
-          use_warm_start=True, meta_db_path='meta_knowledge.pkl', adaptive_operators=True, seed=None, 
+def get_middle_seed():
+    """
+    Generate a new seed by getting a random number and extracting middle digits.
+    This ensures seed diversity across generations while being simple and effective.
+    
+    Returns:
+        New seed value (middle digits of a random 16-digit number)
+    """
+    # Generate a large random number
+    random_num = random.randint(10**15, 10**16 - 1)
+    
+    # Convert to string
+    random_str = str(random_num)
+    
+    # Extract middle 8 digits (positions 4-12)
+    start_idx = (len(random_str) - 8) // 2
+    end_idx = start_idx + 8
+    middle_str = random_str[start_idx:end_idx]
+    
+    # Convert back to integer
+    new_seed = int(middle_str)
+    
+    # Ensure not zero
+    if new_seed == 0:
+        new_seed = 1
+    
+    return new_seed
+
+
+def nsga2(pop_size=20, generations=10, pm=0.3, pc=0.9, data_path=None, plot_path='pareto_progression.png',
+          use_warm_start=True, meta_db_path='meta_knowledge.pkl', adaptive_operators=True, seed=None,
+          update_meta_db=True,
+          hv_ref_point=(0.0, 1e12),
           save_plot=True, show_plot=True):
     """
     NSGA-II with meta-learning enhancements.
@@ -240,6 +270,7 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
         meta_db_path: Path to meta-knowledge database
         adaptive_operators: If True, adjust mutation rate based on population diversity
         seed: Random seed for reproducibility (int or None)
+        update_meta_db: If False, do not update/persist `meta_knowledge.pkl` (helps reproducibility across runs)
         save_plot: If False, skip writing plot files (useful for headless runs)
         show_plot: If False, do not display the plot window (useful in non-interactive environments)
     
@@ -251,17 +282,29 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
     if data_path is None:
         raise ValueError("data_path must be provided")
     
-    # Set random seeds for reproducibility - do this FIRST and ONLY ONCE
-    if seed is not None:
-        os.environ['PYTHONHASHSEED'] = str(seed)  # Ensure hash-based operations are deterministic
-        random.seed(seed)
-        np.random.seed(seed)
-        print(f"Random seed set to: {seed}")
-        print(f"First random numbers for verification: {random.random():.6f}, {np.random.random():.6f}")
-    
+    # Seed initialization (must happen before warm-start population generation)
+    if seed is None:
+        seed = 67
+        print("No seed provided, using default seed 67")
+
+    base_seed = int(seed) % (2**31 - 1)
+
+    # Note: setting PYTHONHASHSEED here is too late to affect Python's hash randomization,
+    # but we keep it for completeness.
+    os.environ['PYTHONHASHSEED'] = str(seed)
+
+    random.seed(base_seed)
+    np.random.seed(base_seed)
+
+    print(f"Random seed set to: {seed} (base_seed={base_seed})")
+    print(f"First random numbers for verification: {random.random():.6f}, {np.random.random():.6f}")
+
     # Initialize meta-learner
     meta_learner = MetaLearner(meta_db_path=meta_db_path, seed=seed)
-    
+
+    dataset_id = os.path.basename(data_path)
+    dataset_signature = meta_learner.compute_dataset_signature(data_path)
+
     # Initialize population
     print("\n" + "="*60)
     print("NSGA-II with Meta-Learning")
@@ -275,19 +318,23 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
 
     if use_warm_start:
         print("Initializing population with meta-knowledge...")
-        warm_pop = meta_learner.get_warm_start_population(pop_size)
+        warm_pop = meta_learner.get_warm_start_population(pop_size,
+                                                          dataset_id=dataset_id,
+                                                          dataset_signature=dataset_signature)
         if warm_pop:
             population = warm_pop
-            print(f"✓ Warm-started with {len(population)} solutions from meta-knowledge\n")
+            print(f"[OK] Warm-started with {len(population)} solutions from meta-knowledge\n")
         else:
-            print("✗ No meta-knowledge available, using random initialization\n")
+            print("[NO] No meta-knowledge available, using random initialization\n")
             population = [Model(seed=draw_model_seed()) for _ in range(pop_size)]
     else:
         population = [Model(seed=draw_model_seed()) for _ in range(pop_size)]
     
+    print(f"Seed key start: {base_seed}")
+
     pop = []
     for m in population:
-        acc, size = evaluate_model(m, data_path, verbose=False)
+        acc, size = evaluate_model(m, data_path, verbose=False, random_state=base_seed)
         pop.append({'model': m, 'accuracy': acc, 'size': size})
 
     pareto_history = []
@@ -296,20 +343,44 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
     
     current_pm = pm  # Adaptive mutation rate
 
-    # Seed revolution initialization: base seed acts as key for subsequent seeds
-    if seed is None:
-        seed = 67
-        print("No seed provided, using default seed 67")
-    current_seed = int(seed) % (2**31 - 1)
-    print(f"Seed key start: {current_seed}")
-
-    random.seed(current_seed)
-    np.random.seed(current_seed)
-
     def draw_model_seed():
         return random.randint(0, 2**31 - 2)
 
+    def crossover_models(parent_a, parent_b):
+        """
+        Simple crossover operator over the hyperparameter dictionaries.
+
+        - If both parents are the same model type, randomly mix parameter values.
+        - Otherwise, copy one parent entirely (type-level crossover).
+        """
+        name_a = parent_a.getModelName()
+        name_b = parent_b.getModelName()
+        params_a = parent_a.getModelParams() or {}
+        params_b = parent_b.getModelParams() or {}
+
+        if name_a == name_b and params_a and params_b:
+            # Mix parameters with a 50/50 coin flip.
+            all_keys = set(params_a.keys()) | set(params_b.keys())
+            child_params = {}
+            for k in all_keys:
+                if k in params_a and k in params_b:
+                    child_params[k] = params_a[k] if random.random() < 0.5 else params_b[k]
+                elif k in params_a:
+                    child_params[k] = params_a[k]
+                else:
+                    child_params[k] = params_b[k]
+            return Model.from_solution(name_a, child_params)
+
+        # Type-level crossover: pick one parent's model as-is.
+        if random.random() < 0.5:
+            return Model.from_solution(name_a, params_a)
+        return Model.from_solution(name_b, params_b)
+
     for gen in range(generations):
+        generation_seed = (base_seed + gen) % (2**31 - 1)
+        random.seed(generation_seed)
+        np.random.seed(generation_seed)
+        print(f"Generation seed key (gen {gen + 1}): {generation_seed}")
         # Non-dominated sorting
         fronts = nondominated_sort(pop)
         
@@ -320,12 +391,6 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
         # Adaptive mutation rate
         if adaptive_operators:
             current_pm = meta_learner.get_adaptive_mutation_rate(diversity)
-        
-        # Evolve seed each generation; seed is the revolution key
-        current_seed = (current_seed * 1103515245 + 12345 + gen + int(diversity * 1000)) % (2**31 - 1)
-        random.seed(current_seed)
-        np.random.seed(current_seed)
-        print(f"Revolution seed key (gen {gen + 1}): {current_seed}")
 
         mutation_history.append(current_pm)
 
@@ -341,7 +406,7 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
                     name = ind['model'].getModelName()
                 except Exception:
                     name = "Model"
-                print(f"  → {name}: Acc={ind.get('accuracy'):.4f}, Size={ind.get('size'):.0f}")
+                print(f"  * {name}: Acc={ind.get('accuracy'):.4f}, Size={ind.get('size'):.0f}")
         else:
             print("  (Empty Pareto front)")
         # ----------------------------------------------
@@ -349,9 +414,9 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
         # record Pareto front (gen 0 included)
         pareto_history.append([{'accuracy': ind['accuracy'], 'size': ind['size']} for ind in fronts[0]] if fronts else [])
         
-        # Add to meta-knowledge
-        if fronts and fronts[0]:
-            meta_learner.add_pareto_front(fronts[0], dataset_id=os.path.basename(data_path))
+        # Optionally learn & persist meta-knowledge (changes future warm-starts across runs)
+        if update_meta_db and fronts and fronts[0]:
+            meta_learner.add_pareto_front(fronts[0], dataset_id=dataset_id, dataset_signature=dataset_signature)
 
         # assign rank and crowding distance
         for r, front in enumerate(fronts):
@@ -364,12 +429,24 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
         while len(offspring) < pop_size:
             p1 = tournament_selection(pop)
             p2 = tournament_selection(pop)
-            child1 = copy.deepcopy(p1['model'])
-            child2 = copy.deepcopy(p2['model'])
-            child1.mutate(current_pm)  # Use adaptive mutation rate
+            parent1 = p1['model']
+            parent2 = p2['model']
+
+            # Crossover (with probability pc)
+            if random.random() < pc:
+                child1 = crossover_models(parent1, parent2)
+                child2 = crossover_models(parent2, parent1)
+            else:
+                # Clone parents via params to avoid carrying trained estimator state.
+                child1 = Model.from_solution(parent1.getModelName(), parent1.getModelParams())
+                child2 = Model.from_solution(parent2.getModelName(), parent2.getModelParams())
+
+            # Mutation (with probability = current_pm)
+            child1.mutate(current_pm)
             child2.mutate(current_pm)
             for child in (child1, child2):
-                acc, size = evaluate_model(child, data_path, verbose=False)
+                # Fixed split for objective consistency across the whole run.
+                acc, size = evaluate_model(child, data_path, verbose=False, random_state=base_seed)
                 offspring.append({'model': child, 'accuracy': acc, 'size': size})
                 if len(offspring) >= pop_size:
                     break
@@ -402,7 +479,7 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
         avg_accuracy = np.mean([ind['accuracy'] for ind in final_pareto])
         count_pareto = len(final_pareto)
         avg_size = np.mean([ind['size'] for ind in final_pareto])
-        hypervolume = compute_hypervolume(final_pareto)
+        hypervolume = compute_hypervolume(final_pareto, ref_point=hv_ref_point)
         
         print("\n" + "="*60)
         print("FINAL PARETO FRONT SOLUTIONS")
@@ -437,8 +514,8 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
         print("\nNo Pareto front found!")
     
     # Add final front to meta-knowledge
-    if fronts and fronts[0]:
-        meta_learner.add_pareto_front(fronts[0], dataset_id=os.path.basename(data_path))
+    if update_meta_db and fronts and fronts[0]:
+        meta_learner.add_pareto_front(fronts[0], dataset_id=dataset_id, dataset_signature=dataset_signature)
         meta_learner.save_meta_knowledge()
         meta_learner.export_meta_knowledge_summary()
 
@@ -496,7 +573,7 @@ def nsga2(pop_size=20, generations=10, pm=0.3, data_path=None, plot_path='pareto
     # plt.tight_layout()
     # if save_plot and plot_path:
     #     plt.savefig(plot_path, dpi=150)
-    #     print(f"\n✓ Save visualization to {plot_path}")
+    #     print(f"\n[OK] Save visualization to {plot_path}")
 
     # if show_plot:
     #     try:
@@ -521,6 +598,7 @@ if __name__ == '__main__':
     gens = int(sys.argv[3]) if len(sys.argv) >= 4 and sys.argv[3].isdigit() else 10
     use_warm = '--no-warm-start' not in sys.argv
     use_adaptive = '--no-adaptive' not in sys.argv
+    update_meta_db = '--no-meta-update' not in sys.argv
 
     seed = None
     if '--seed' in sys.argv:
@@ -534,4 +612,4 @@ if __name__ == '__main__':
         seed = int(sys.argv[4])
 
     nsga2(pop_size=ps, generations=gens, data_path=data,
-          use_warm_start=use_warm, adaptive_operators=use_adaptive, seed=seed)
+          use_warm_start=use_warm, adaptive_operators=use_adaptive, seed=seed, update_meta_db=update_meta_db)

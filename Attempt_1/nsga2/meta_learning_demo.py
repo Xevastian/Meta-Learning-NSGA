@@ -63,7 +63,9 @@ def hypervolume_indicator(front, ref_point=None):
     sizes = [p['size'] for p in valid_front]
 
     if ref_point is None:
-        ref_point = (min(accs) - 0.1, max(sizes) + 1000)
+        # Determinism/comparability across runs: use a fixed reference point.
+        # Objectives: accuracy in [0,1] (maximize), size >= 0 (minimize).
+        ref_point = (0.0, 1e12)
 
     ref_acc, ref_size = ref_point
 

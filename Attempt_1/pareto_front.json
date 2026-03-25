@@ -2,36 +2,110 @@
   {
     "name": "LogisticRegression",
     "params": {
-      "l1_ratio": 0.0,
-      "C": Infinity,
+      "penalty": "l1",
+      "l1_ratio": 1.0,
       "solver": "saga",
-      "max_iter": 93,
-      "tol": 1.0017672324848084e-06,
+      "C": 1.5905652724951345,
+      "max_iter": 881,
+      "tol": 0.00024402221460342562,
       "random_state": null
     },
-    "accuracy": 0.9413680781758957,
-    "size": 1162.0
+    "accuracy": 0.9348534201954397,
+    "size": 1155.0
+  },
+  {
+    "name": "LogisticRegression",
+    "params": {
+      "l1_ratio": 1e-08,
+      "C": Infinity,
+      "solver": "newton-cg",
+      "max_iter": 1636,
+      "tol": 5.671808741469262e-05,
+      "random_state": null
+    },
+    "accuracy": 0.9370249728555917,
+    "size": 1168.0
   },
   {
     "name": "MLP",
     "params": {
       "hidden_layer_sizes": [
-        103,
-        51
+        49,
+        24
       ],
       "activation": "relu",
-      "solver": "adam",
-      "alpha": 1.2683303634349728e-05,
+      "solver": "lbfgs",
+      "alpha": 8.165683824310213e-05,
+      "learning_rate": "invscaling",
+      "learning_rate_init": 0.0012378114289230155,
+      "batch_size": 192,
+      "max_iter": 204,
+      "early_stopping": true,
+      "validation_fraction": 0.1,
+      "n_iter_no_change": 10,
+      "random_state": null
+    },
+    "accuracy": 0.9424538545059717,
+    "size": 135317.0
+  },
+  {
+    "name": "MLP",
+    "params": {
+      "hidden_layer_sizes": [
+        35,
+        17
+      ],
+      "activation": "relu",
+      "solver": "lbfgs",
+      "alpha": 0.002793204124656154,
       "learning_rate": "constant",
-      "learning_rate_init": 0.0007096262845802749,
-      "batch_size": 248,
-      "max_iter": 698,
+      "learning_rate_init": 0.06231209032868497,
+      "batch_size": 136,
+      "max_iter": 300,
+      "early_stopping": true,
+      "validation_fraction": 0.1,
+      "n_iter_no_change": 10,
+      "random_state": null
+    },
+    "accuracy": 0.9435396308360477,
+    "size": 153678.0
+  },
+  {
+    "name": "MLP",
+    "params": {
+      "hidden_layer_sizes": [
+        126,
+        63
+      ],
+      "activation": "logistic",
+      "solver": "adam",
+      "alpha": 7.813452073384152e-06,
+      "learning_rate": "adaptive",
+      "learning_rate_init": 0.0002029950877061296,
+      "batch_size": 40,
+      "max_iter": 654,
       "early_stopping": true,
       "validation_fraction": 0.1,
       "n_iter_no_change": 10,
       "random_state": null
     },
     "accuracy": 0.9478827361563518,
-    "size": 218835.0
+    "size": 218553.0
+  },
+  {
+    "name": "HistGradientBoosting",
+    "params": {
+      "max_iter": 876,
+      "max_depth": 3,
+      "learning_rate": 0.08297115711018953,
+      "max_leaf_nodes": 170,
+      "min_samples_leaf": 16,
+      "l2_regularization": 53.8465198628526,
+      "max_bins": 63,
+      "early_stopping": false,
+      "random_state": null
+    },
+    "accuracy": 0.9609120521172638,
+    "size": 1038448.0
   }
 ]

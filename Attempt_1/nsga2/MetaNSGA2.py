@@ -2,9 +2,10 @@ import json
 import os
 from .nsga2 import nsga2, nondominated_sort
 from .trainer import Trainer
+import numpy as np
 
 class MetaLearningNSGA2:
-    def __init__(self, data_path, priority_accuracy=0.5, priority_size=0.5, pop_size=20, generations=10, seed=None):
+    def __init__(self, data_path, priority_accuracy=0.5, priority_size=0.5, pop_size=20, generations=10, seed=None, update_meta_db=True):
         """
         Initialize MetaLearningNSGA2.
 
@@ -22,6 +23,7 @@ class MetaLearningNSGA2:
         self.pop_size = pop_size
         self.generations = generations
         self.seed = seed
+        self.update_meta_db = update_meta_db
         self.pareto_front = None
 
     def run(self):
@@ -37,6 +39,7 @@ class MetaLearningNSGA2:
             generations=self.generations,
             data_path=self.data_path,
             seed=self.seed,
+            update_meta_db=self.update_meta_db,
             save_plot=False,
             show_plot=False
         )
@@ -59,8 +62,28 @@ class MetaLearningNSGA2:
         with open('pareto_front.json', 'w') as f:
             json.dump(pareto_data, f, indent=2)
 
+        # Build ready-to-use trained models from Pareto solutions
+        self.ready_to_use_models = []
+        for ind in self.pareto_front:
+            if 'model' not in ind:
+                continue
+            base_model = ind['model']
+            trainer = Trainer(base_model, self.data_path)
+            trained_clf = trainer.getModel()
+            self.ready_to_use_models.append({
+                'pareto_model': base_model,
+                'trained_model': trained_clf,
+                'scaler': trainer.scaler,
+                'accuracy': ind.get('accuracy', None),
+                'size': ind.get('size', None)
+            })
+
+        # If ready_to_use_models is empty, keep fallback to raw pareto front items
+        if not self.ready_to_use_models:
+            self.ready_to_use_models = self.pareto_front
+
         print(f"Pareto front saved to pareto_front.json with {len(self.pareto_front)} models")
-        return self.pareto_front
+        return self.ready_to_use_models
 
     def get_confusion_matrix(self, model_index):
         """
@@ -122,3 +145,24 @@ class MetaLearningNSGA2:
             acc = ind['accuracy']
             size = ind['size']
             print(f"{i}: {name} - Acc={acc:.4f}, Size={size}")
+
+    def get_ready_model(self, model_index):
+        """Return trained ready-to-use model dictionary from Pareto index."""
+        if not hasattr(self, 'ready_to_use_models') or self.ready_to_use_models is None:
+            raise ValueError("Run the algorithm first using run()")
+        if model_index < 0 or model_index >= len(self.ready_to_use_models):
+            raise IndexError("Model index out of range")
+        return self.ready_to_use_models[model_index]
+
+    def predict_pareto(self, model_index, x):
+        """Predict for new input vector x using Pareto model at model_index."""
+        entry = self.get_ready_model(model_index)
+        clf = entry['trained_model']
+        scaler = entry['scaler']
+
+        x_arr = np.array(x, dtype=float)
+        if x_arr.ndim == 1:
+            x_arr = x_arr.reshape(1, -1)
+        if scaler is not None:
+            x_arr = scaler.transform(x_arr)
+        return clf.predict(x_arr)

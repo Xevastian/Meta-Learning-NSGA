@@ -9,7 +9,7 @@ from sklearn.exceptions import ConvergenceWarning
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
 class Trainer:
-    def __init__(self, model, data, target_column='label', test_size=0.2, random_state=42, scale_data=True):
+    def __init__(self, model, data, target_column='label', test_size=0.2, random_state=42, scale_data=True, stratify=True):
         try:
             # Store model
             self.model_instance = model
@@ -34,9 +34,14 @@ class Trainer:
             else:
                 self.scaler = None
             
-            # Split data
+            # Split data deterministically; stratify if requested and feasible
+            stratify_vals = self.y if stratify and len(np.unique(self.y)) > 1 else None
             self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-                self.X, self.y, test_size=test_size, random_state=None
+                self.X,
+                self.y,
+                test_size=test_size,
+                random_state=random_state,
+                stratify=stratify_vals
             )
             
             # Train the model
