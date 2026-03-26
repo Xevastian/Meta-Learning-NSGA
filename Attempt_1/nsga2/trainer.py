@@ -26,6 +26,7 @@ class Trainer:
             self.target_column = target_column
             self.X = self.df.drop(target_column, axis=1).values
             self.y = self.df[target_column].values
+            self.X = self.__sanitize_features(self.X)
             
             # Scale data if requested
             if scale_data:
@@ -71,6 +72,30 @@ class Trainer:
             self.accuracy = 0.0
             self.size = float('inf')
             self.confusion_matrix = None
+
+    def __sanitize_features(self, X):
+        """
+        Sanitize feature matrix to avoid scaler/estimator failures:
+        - force float64 conversion
+        - replace +/-inf with NaN
+        - impute NaN per column with median (fallback 0.0)
+        - clip extreme magnitudes to a stable numeric range
+        """
+        X = np.asarray(X, dtype=np.float64)
+
+        # Replace infinities with NaN for unified handling.
+        X[~np.isfinite(X)] = np.nan
+
+        if np.isnan(X).any():
+            col_medians = np.nanmedian(X, axis=0)
+            # Columns that are all NaN produce NaN medians; fallback to 0.0.
+            col_medians = np.where(np.isnan(col_medians), 0.0, col_medians)
+            nan_rows, nan_cols = np.where(np.isnan(X))
+            X[nan_rows, nan_cols] = col_medians[nan_cols]
+
+        # Clip extreme values to avoid downstream float overflows.
+        X = np.clip(X, -1e12, 1e12)
+        return X
     
     def __train(self):
         """Train the model"""

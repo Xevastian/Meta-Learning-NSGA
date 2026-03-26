@@ -1,6 +1,6 @@
 === META-LEARNING KNOWLEDGE SUMMARY ===
 
-Total solutions learned: 19
+Total solutions learned: 15
 
 Model Performance Ranking:
 --------------------------------------------------
@@ -10,50 +10,50 @@ MLP:
   Win Rate: 100.00%
 
 LogisticRegression:
-  Average Accuracy: 0.9302
-  Times in Pareto Front: 11/11
+  Average Accuracy: 0.9369
+  Times in Pareto Front: 7/7
   Win Rate: 100.00%
 
 
 Top 10 Solutions:
 --------------------------------------------------
 1. LogisticRegression
-   Accuracy: 0.9392, Size: 1167
-   Fitness: 0.7959
+   Accuracy: 0.9403, Size: 1168
+   Fitness: 0.7966
 
 2. LogisticRegression
-   Accuracy: 0.9392, Size: 1167
-   Fitness: 0.7959
+   Accuracy: 0.9392, Size: 1160
+   Fitness: 0.7963
 
 3. LogisticRegression
-   Accuracy: 0.9392, Size: 1167
-   Fitness: 0.7959
+   Accuracy: 0.9392, Size: 1168
+   Fitness: 0.7958
 
 4. LogisticRegression
-   Accuracy: 0.9392, Size: 1167
-   Fitness: 0.7959
+   Accuracy: 0.9392, Size: 1168
+   Fitness: 0.7958
 
 5. LogisticRegression
-   Accuracy: 0.9251, Size: 1159
-   Fitness: 0.7865
+   Accuracy: 0.9392, Size: 1168
+   Fitness: 0.7958
 
 6. LogisticRegression
-   Accuracy: 0.9251, Size: 1159
-   Fitness: 0.7865
+   Accuracy: 0.9359, Size: 1160
+   Fitness: 0.7940
 
 7. LogisticRegression
-   Accuracy: 0.9251, Size: 1159
-   Fitness: 0.7865
+   Accuracy: 0.9251, Size: 1160
+   Fitness: 0.7864
 
-8. LogisticRegression
-   Accuracy: 0.9251, Size: 1159
-   Fitness: 0.7865
+8. MLP
+   Accuracy: 0.9457, Size: 49540
+   Fitness: 0.6679
 
-9. LogisticRegression
-   Accuracy: 0.9251, Size: 1159
-   Fitness: 0.7865
+9. MLP
+   Accuracy: 0.9457, Size: 49540
+   Fitness: 0.6679
 
-10. LogisticRegression
-   Accuracy: 0.9251, Size: 1159
-   Fitness: 0.7865
+10. MLP
+   Accuracy: 0.9457, Size: 49540
+   Fitness: 0.6679
 
