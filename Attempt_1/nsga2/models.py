@@ -319,6 +319,22 @@ class Model:
             elif penalty == 'l2':
                 params['l1_ratio'] = 0.0
 
+            # Enforce solver-penalty compatibility for sklearn LogisticRegression.
+            solver = params.get('solver')
+            if penalty in ('l1', 'elasticnet'):
+                # Only saga supports both l1 and elasticnet robustly.
+                params['solver'] = 'saga'
+            elif penalty == 'l2':
+                # Keep a valid l2 solver; fallback if invalid/missing.
+                valid_l2 = {'newton-cg', 'lbfgs', 'sag', 'saga'}
+                if solver not in valid_l2:
+                    params['solver'] = 'lbfgs'
+            else:
+                # Unknown penalty fallback to sklearn-safe defaults.
+                params['penalty'] = 'l2'
+                params['l1_ratio'] = 0.0
+                params['solver'] = 'lbfgs'
+
             return LogisticRegression(**params)
         elif model_name == 'SGD':
             return SGDClassifier(**params)

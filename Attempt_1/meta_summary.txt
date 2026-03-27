@@ -1,12 +1,12 @@
 === META-LEARNING KNOWLEDGE SUMMARY ===
 
-Total solutions learned: 15
+Total solutions learned: 21
 
 Model Performance Ranking:
 --------------------------------------------------
 MLP:
-  Average Accuracy: 0.9479
-  Times in Pareto Front: 8/8
+  Average Accuracy: 0.9445
+  Times in Pareto Front: 14/14
   Win Rate: 100.00%
 
 LogisticRegression:
@@ -46,14 +46,14 @@ Top 10 Solutions:
    Fitness: 0.7864
 
 8. MLP
-   Accuracy: 0.9457, Size: 49540
-   Fitness: 0.6679
+   Accuracy: 0.9414, Size: 49540
+   Fitness: 0.6649
 
 9. MLP
-   Accuracy: 0.9457, Size: 49540
-   Fitness: 0.6679
+   Accuracy: 0.9414, Size: 49540
+   Fitness: 0.6649
 
 10. MLP
-   Accuracy: 0.9457, Size: 49540
-   Fitness: 0.6679
+   Accuracy: 0.9414, Size: 49540
+   Fitness: 0.6649
 

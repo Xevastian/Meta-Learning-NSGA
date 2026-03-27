@@ -26,6 +26,11 @@ class MetaLearningNSGA2:
         self.update_meta_db = update_meta_db
         self.pareto_front = None
 
+    def _split_random_state(self):
+        """Match nsga2.py: base_seed = int(seed) % (2**31 - 1), default seed 67."""
+        s = self.seed if self.seed is not None else 67
+        return int(s) % (2**31 - 1)
+
     def run(self):
         """
         Run NSGA-II and return the Pareto front.
@@ -68,12 +73,14 @@ class MetaLearningNSGA2:
             if 'model' not in ind:
                 continue
             base_model = ind['model']
-            trainer = Trainer(base_model, self.data_path)
+            rs = self._split_random_state()
+            trainer = Trainer(base_model, self.data_path, random_state=rs)
             trained_clf = trainer.getModel()
             self.ready_to_use_models.append({
                 'pareto_model': base_model,
                 'trained_model': trained_clf,
                 'scaler': trainer.scaler,
+                'impute_medians': trainer.get_impute_medians(),
                 'accuracy': ind.get('accuracy', None),
                 'size': ind.get('size', None)
             })
@@ -101,7 +108,7 @@ class MetaLearningNSGA2:
             raise IndexError("Model index out of range")
 
         model = self.pareto_front[model_index]['model']
-        trainer = Trainer(model, self.data_path)
+        trainer = Trainer(model, self.data_path, random_state=self._split_random_state())
         return trainer.getConfusionMatrix()
 
     def get_model_config(self, model_index):
@@ -159,10 +166,19 @@ class MetaLearningNSGA2:
         entry = self.get_ready_model(model_index)
         clf = entry['trained_model']
         scaler = entry['scaler']
+        med = entry.get('impute_medians')
 
         x_arr = np.array(x, dtype=float)
         if x_arr.ndim == 1:
             x_arr = x_arr.reshape(1, -1)
+        # Match Trainer: train-fitted imputation + clip, then scaler (same as training pipeline)
+        if med is not None:
+            x_arr = np.asarray(x_arr, dtype=np.float64)
+            x_arr[~np.isfinite(x_arr)] = np.nan
+            if np.isnan(x_arr).any():
+                nr, nc = np.where(np.isnan(x_arr))
+                x_arr[nr, nc] = med[nc]
+            x_arr = np.clip(x_arr, -1e12, 1e12)
         if scaler is not None:
             x_arr = scaler.transform(x_arr)
         return clf.predict(x_arr)

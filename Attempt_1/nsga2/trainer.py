@@ -26,15 +26,7 @@ class Trainer:
             self.target_column = target_column
             self.X = self.df.drop(target_column, axis=1).values
             self.y = self.df[target_column].values
-            self.X = self.__sanitize_features(self.X)
-            
-            # Scale data if requested
-            if scale_data:
-                self.scaler = StandardScaler()
-                self.X = self.scaler.fit_transform(self.X)
-            else:
-                self.scaler = None
-            
+
             # Split data deterministically; stratify if requested and feasible
             stratify_vals = self.y if stratify and len(np.unique(self.y)) > 1 else None
             self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
@@ -44,7 +36,20 @@ class Trainer:
                 random_state=random_state,
                 stratify=stratify_vals
             )
-            
+
+            # Sanitize features: fit medians on TRAIN only, then apply to train and test (no leakage)
+            self._impute_medians = None
+            self.X_train = self.__fit_sanitize(self.X_train)
+            self.X_test = self.__transform_sanitize(self.X_test)
+
+            # Scale data if requested
+            if scale_data:
+                self.scaler = StandardScaler()
+                self.X_train = self.scaler.fit_transform(self.X_train)
+                self.X_test = self.scaler.transform(self.X_test)
+            else:
+                self.scaler = None
+
             # Train the model
             self.trained_model = self.__train()
             
@@ -73,29 +78,53 @@ class Trainer:
             self.size = float('inf')
             self.confusion_matrix = None
 
-    def __sanitize_features(self, X):
+    _CLIP_LOW = -1e12
+    _CLIP_HIGH = 1e12
+
+    def __fit_sanitize(self, X_train):
         """
-        Sanitize feature matrix to avoid scaler/estimator failures:
-        - force float64 conversion
-        - replace +/-inf with NaN
-        - impute NaN per column with median (fallback 0.0)
-        - clip extreme magnitudes to a stable numeric range
+        Learn per-column medians from training data only; impute and clip train.
+        """
+        X = np.asarray(X_train, dtype=np.float64)
+        X[~np.isfinite(X)] = np.nan
+        col_medians = np.nanmedian(X, axis=0)
+        col_medians = np.where(np.isnan(col_medians), 0.0, col_medians)
+        self._impute_medians = col_medians
+        if np.isnan(X).any():
+            nan_rows, nan_cols = np.where(np.isnan(X))
+            X[nan_rows, nan_cols] = self._impute_medians[nan_cols]
+        return np.clip(X, self._CLIP_LOW, self._CLIP_HIGH)
+
+    def __transform_sanitize(self, X):
+        """
+        Apply training medians to test (and any future data): no test statistics used.
         """
         X = np.asarray(X, dtype=np.float64)
-
-        # Replace infinities with NaN for unified handling.
         X[~np.isfinite(X)] = np.nan
-
+        if self._impute_medians is None:
+            raise RuntimeError("__transform_sanitize called before __fit_sanitize")
+        if X.shape[1] != self._impute_medians.shape[0]:
+            raise ValueError(
+                f"Feature count mismatch: got {X.shape[1]}, expected {self._impute_medians.shape[0]}"
+            )
         if np.isnan(X).any():
-            col_medians = np.nanmedian(X, axis=0)
-            # Columns that are all NaN produce NaN medians; fallback to 0.0.
-            col_medians = np.where(np.isnan(col_medians), 0.0, col_medians)
             nan_rows, nan_cols = np.where(np.isnan(X))
-            X[nan_rows, nan_cols] = col_medians[nan_cols]
+            X[nan_rows, nan_cols] = self._impute_medians[nan_cols]
+        return np.clip(X, self._CLIP_LOW, self._CLIP_HIGH)
 
-        # Clip extreme values to avoid downstream float overflows.
-        X = np.clip(X, -1e12, 1e12)
+    def apply_feature_preprocessing(self, X):
+        """
+        Same pipeline as training inputs: train-fitted imputation + clip + scaler (if any).
+        Use for prediction on new rows so it matches fit().
+        """
+        X = self.__transform_sanitize(np.asarray(X, dtype=np.float64))
+        if self.scaler is not None:
+            X = self.scaler.transform(X)
         return X
+
+    def get_impute_medians(self):
+        """Expose train-fitted medians for callers that need manual preprocessing."""
+        return None if self._impute_medians is None else self._impute_medians.copy()
     
     def __train(self):
         """Train the model"""
