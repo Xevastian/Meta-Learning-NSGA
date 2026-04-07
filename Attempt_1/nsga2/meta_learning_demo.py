@@ -227,15 +227,20 @@ def run_baseline_vs_meta_learning(data_path, pop_size=15, generations=8, num_run
     # Quality metric: average accuracy in Pareto front
     if pareto_baseline:
         avg_acc_baseline = np.mean([p['accuracy'] for p in pareto_baseline])
+        avg_size_baseline = np.mean([p['size'] for p in pareto_baseline])
     else:
         avg_acc_baseline = 0
+        avg_size_baseline = 0
     
     if pareto_meta:
         avg_acc_meta = np.mean([p['accuracy'] for p in pareto_meta])
+        avg_size_meta = np.mean([p['size'] for p in pareto_meta])
     else:
         avg_acc_meta = 0
+        avg_size_meta = 0
     
     print(f"{'Avg Accuracy in Pareto':<30} {avg_acc_baseline:<20.4f} {avg_acc_meta:<20.4f} {avg_acc_meta - avg_acc_baseline:+.4f}")
+    print(f"{'Avg Size in Pareto':<30} {avg_size_baseline:<20.2f} {avg_size_meta:<20.2f} {avg_size_meta - avg_size_baseline:+.2f}")
     
     # ============ SEQUENTIAL RUNS (Demonstrating meta-knowledge accumulation) ============
     if num_runs > 2:
@@ -303,12 +308,12 @@ def run_baseline_vs_meta_learning(data_path, pop_size=15, generations=8, num_run
 
 if __name__ == '__main__':
     # Set seed for reproducibility
-    np.random.seed(67)
+    np.random.seed(42)
     
     # Configuration
     DATA_PATH = 'Spam.csv'  # Change to your dataset
-    POP_SIZE = 15
-    GENERATIONS = 8
+    POP_SIZE = 8
+    GENERATIONS = 4
     NUM_RUNS = 2
     
     # Check if data file exists
@@ -331,9 +336,3 @@ if __name__ == '__main__':
     print("\n" + "="*70)
     print("Meta-Learning NSGA-II Demo Complete!")
     print("="*70)
-    print("\nKey Takeaways:")
-    print("1. Meta-learning accelerates convergence by warm-starting with known good solutions")
-    print("2. Adaptive operators (mutation rate) respond to population diversity")
-    print("3. Meta-knowledge improves over successive runs on similar problems")
-    print("4. Suitable for scenarios with multiple runs on related optimization problems")
-    print("\nFor more information, see: meta_learner.py and nsga2.py")
