@@ -20,6 +20,7 @@ import warnings
 import pickle
 import numpy as np
 import time
+import concurrent.futures
 from typing import List, Dict, Tuple, Optional
 
 warnings.filterwarnings("ignore")
@@ -35,6 +36,26 @@ def format_size(size_bytes):
         return f"{size_bytes / 1024:.2f} KB"
     else:  # Bytes
         return f"{size_bytes:.0f} B"
+
+
+def _set_worker_thread_limits():
+    os.environ['OMP_NUM_THREADS'] = '1'
+    os.environ['MKL_NUM_THREADS'] = '1'
+    os.environ['OPENBLAS_NUM_THREADS'] = '1'
+    os.environ['NUMEXPR_NUM_THREADS'] = '1'
+
+
+def _normalize_n_jobs(n_jobs):
+    if n_jobs is None:
+        return max(1, min(4, os.cpu_count() or 1))
+    return max(1, int(n_jobs))
+
+
+def _evaluate_model_worker(args):
+    model_name, model_params, data_path, random_state = args
+    _set_worker_thread_limits()
+    model = Model.from_solution(model_name, model_params)
+    return evaluate_model(model, data_path, verbose=False, random_state=random_state)
 
 try:
     from .models import Model
@@ -292,7 +313,8 @@ def sms_emoa(
     data_path: Optional[str] = None,
     seed: Optional[int] = None,
     hv_ref_point: Tuple[float, float] = (0.0, 1e12),
-    verbose: bool = True
+    verbose: bool = True,
+    n_jobs: Optional[int] = None
 ) -> List[Dict]:
     """
     SMS-EMOA: S-Metric Selection NSGA-II with Meta-Learning.
@@ -348,9 +370,11 @@ def sms_emoa(
     random.seed(base_seed)
     np.random.seed(base_seed)
     
+    n_jobs = _normalize_n_jobs(n_jobs)
     if verbose:
         print(f"Random seed set to: {seed} (base_seed={base_seed})")
         print(f"First random verification: {random.random():.6f}, {np.random.random():.6f}")
+        print(f"Parallel workers: {n_jobs}")
     
     # Print header
     if verbose:
@@ -373,9 +397,19 @@ def sms_emoa(
     
     # Evaluate initial population
     pop = []
-    for m in population:
-        acc, size = evaluate_model(m, data_path, verbose=False, random_state=base_seed)
-        pop.append({'model': m, 'accuracy': acc, 'size': size})
+    if n_jobs > 1:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=n_jobs) as executor:
+            payloads = [
+                (m.getModelName(), m.getModelParams(), data_path, base_seed)
+                for m in population
+            ]
+            results = list(executor.map(_evaluate_model_worker, payloads))
+        for m, (acc, size) in zip(population, results):
+            pop.append({'model': m, 'accuracy': acc, 'size': size})
+    else:
+        for m in population:
+            acc, size = evaluate_model(m, data_path, verbose=False, random_state=base_seed)
+            pop.append({'model': m, 'accuracy': acc, 'size': size})
     
     # Tracking metrics
     pareto_history = []
@@ -427,14 +461,25 @@ def sms_emoa(
 
             # Mutation
             child.mutate(pm)
+            children.append(child)
 
-            # Evaluate
-            acc, size = evaluate_model(child, data_path, verbose=False, random_state=base_seed)
-
-            children.append({'model': child, 'accuracy': acc, 'size': size})
+        children_with_results = []
+        if n_jobs > 1:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=n_jobs) as executor:
+                payloads = [
+                    (child.getModelName(), child.getModelParams(), data_path, base_seed)
+                    for child in children
+                ]
+                results = list(executor.map(_evaluate_model_worker, payloads))
+            for child, (acc, size) in zip(children, results):
+                children_with_results.append({'model': child, 'accuracy': acc, 'size': size})
+        else:
+            for child in children:
+                acc, size = evaluate_model(child, data_path, verbose=False, random_state=base_seed)
+                children_with_results.append({'model': child, 'accuracy': acc, 'size': size})
 
         # --- Add BOTH offspring ---
-        pop.extend(children)
+        pop.extend(children_with_results)
 
         # --- Remove TWO worst individuals (SMS-EMOA style) ---
         while len(pop) > pop_size:

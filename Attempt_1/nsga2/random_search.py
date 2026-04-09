@@ -18,6 +18,7 @@ import copy
 import warnings
 import numpy as np
 import time
+import concurrent.futures
 from typing import List, Dict, Tuple, Optional
 
 warnings.filterwarnings("ignore")
@@ -33,6 +34,26 @@ def format_size(size_bytes):
         return f"{size_bytes / 1024:.2f} KB"
     else:  # Bytes
         return f"{size_bytes:.0f} B"
+
+
+def _set_worker_thread_limits():
+    os.environ['OMP_NUM_THREADS'] = '1'
+    os.environ['MKL_NUM_THREADS'] = '1'
+    os.environ['OPENBLAS_NUM_THREADS'] = '1'
+    os.environ['NUMEXPR_NUM_THREADS'] = '1'
+
+
+def _normalize_n_jobs(n_jobs):
+    if n_jobs is None:
+        return max(1, min(4, os.cpu_count() or 1))
+    return max(1, int(n_jobs))
+
+
+def _evaluate_model_worker(args):
+    model_name, model_params, data_path, random_state = args
+    _set_worker_thread_limits()
+    model = Model.from_solution(model_name, model_params)
+    return evaluate_model(model, data_path, verbose=False, random_state=random_state)
 
 try:
     from .models import Model
@@ -190,7 +211,8 @@ def random_search(
     data_path: Optional[str] = None,
     seed: Optional[int] = None,
     hv_ref_point: Tuple[float, float] = (0.0, 1e12),
-    verbose: bool = True
+    verbose: bool = True,
+    n_jobs: Optional[int] = None
 ) -> List[Dict]:
     """
     Random Search: Sample models uniformly at random from the solution space.
@@ -238,9 +260,11 @@ def random_search(
     random.seed(base_seed)
     np.random.seed(base_seed)
     
+    n_jobs = _normalize_n_jobs(n_jobs)
     if verbose:
         print(f"Random seed set to: {seed} (base_seed={base_seed})")
         print(f"First random verification: {random.random():.6f}, {np.random.random():.6f}")
+        print(f"Parallel workers: {n_jobs}")
     
     # Print header
     if verbose:
@@ -260,17 +284,26 @@ def random_search(
     pareto_history = []
     hv_history = []
     
+    sample_models = [Model(seed=draw_model_seed()) for _ in range(n_samples)]
+    if n_jobs > 1:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=n_jobs) as executor:
+            payloads = [
+                (m.getModelName(), m.getModelParams(), data_path, base_seed)
+                for m in sample_models
+            ]
+            results = list(executor.map(_evaluate_model_worker, payloads))
+        for model, (acc, size) in zip(sample_models, results):
+            population.append({'model': model, 'accuracy': acc, 'size': size})
+    else:
+        for model in sample_models:
+            acc, size = evaluate_model(model, data_path, verbose=False, random_state=base_seed)
+            population.append({'model': model, 'accuracy': acc, 'size': size})
+
     for sample_idx in range(n_samples):
-        # Generate random model
-        model = Model(seed=draw_model_seed())
-        
-        # Evaluate model
-        acc, size = evaluate_model(model, data_path, verbose=False, random_state=base_seed)
-        population.append({'model': model, 'accuracy': acc, 'size': size})
-        
         # Compute Pareto front every 10 samples
         if (sample_idx + 1) % 10 == 0 or sample_idx == 0:
-            fronts = nondominated_sort(population)
+            current_population = population[:sample_idx + 1]
+            fronts = nondominated_sort(current_population)
             pareto_front = fronts[0] if fronts else []
             hv = compute_2d_hypervolume(pareto_front, hv_ref_point)
             hv_history.append(hv)
@@ -280,7 +313,7 @@ def random_search(
             
             if verbose:
                 print(f"Sample {sample_idx + 1}/{n_samples}: "
-                      f"Population size={len(population)}, "
+                      f"Population size={len(current_population)}, "
                       f"Pareto size={len(pareto_front)}, "
                       f"HV={hv:.2f}")
     

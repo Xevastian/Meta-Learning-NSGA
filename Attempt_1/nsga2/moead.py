@@ -4,6 +4,7 @@ import warnings
 import argparse
 import numpy as np
 import time
+import concurrent.futures
 
 # Import modules with fallbacks for relative imports
 try:
@@ -26,6 +27,26 @@ def format_size(size_bytes):
         return f"{size_bytes / 1024:.2f} KB"
     else:  # Bytes
         return f"{size_bytes:.0f} B"
+
+
+def _set_worker_thread_limits():
+    os.environ['OMP_NUM_THREADS'] = '1'
+    os.environ['MKL_NUM_THREADS'] = '1'
+    os.environ['OPENBLAS_NUM_THREADS'] = '1'
+    os.environ['NUMEXPR_NUM_THREADS'] = '1'
+
+
+def _normalize_n_jobs(n_jobs):
+    if n_jobs is None:
+        return max(1, min(4, os.cpu_count() or 1))
+    return max(1, int(n_jobs))
+
+
+def _evaluate_model_worker(args):
+    model_name, model_params, data_path, random_state = args
+    _set_worker_thread_limits()
+    model = Model.from_solution(model_name, model_params)
+    return evaluate_model(model, data_path, verbose=False, random_state=random_state)
 
 
 def tchebycheff(individual, weights, ref_point):
@@ -234,7 +255,8 @@ def _update_ep(EP, new_solutions):
 
 def moead(pop_size=20, generations=10, pm=0.3, pc=0.9, data_path=None,
           seed=None, aggregation='tchebycheff', neighbor_size=None,
-          replacement_rate=0.9, save_plot=False, show_plot=False, verbose=True):
+          replacement_rate=0.9, save_plot=False, show_plot=False, verbose=True,
+          n_jobs=None):
     """
     MOEA/D: Multiobjective Evolutionary Algorithm Based on Decomposition.
     
@@ -280,6 +302,10 @@ def moead(pop_size=20, generations=10, pm=0.3, pc=0.9, data_path=None,
     print(f"Random seed set to: {seed} (base_seed={base_seed})")
     print(f"First random numbers for verification: {random.random():.6f}, {np.random.random():.6f}")
     
+    n_jobs = _normalize_n_jobs(n_jobs)
+    if verbose:
+        print(f"Parallel workers: {n_jobs}")
+
     # Setup decomposition
     num_subproblems = pop_size
     weight_vectors = generate_weight_vectors(num_subproblems, num_objectives=2, method='uniform')
@@ -309,15 +335,31 @@ def moead(pop_size=20, generations=10, pm=0.3, pc=0.9, data_path=None,
 
     # Evaluate initial population
     pop = []
-    for i, m in enumerate(population):
-        acc, size = evaluate_model(m, data_path, verbose=False, random_state=base_seed)
-        pop.append({
-            'model': m,
-            'accuracy': acc,
-            'size': size,
-            'subproblem_idx': i,
-            'weight': weight_vectors[i]
-        })
+    if n_jobs > 1:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=n_jobs) as executor:
+            payloads = [
+                (m.getModelName(), m.getModelParams(), data_path, base_seed)
+                for m in population
+            ]
+            results = list(executor.map(_evaluate_model_worker, payloads))
+        for i, (m, (acc, size)) in enumerate(zip(population, results)):
+            pop.append({
+                'model': m,
+                'accuracy': acc,
+                'size': size,
+                'subproblem_idx': i,
+                'weight': weight_vectors[i]
+            })
+    else:
+        for i, m in enumerate(population):
+            acc, size = evaluate_model(m, data_path, verbose=False, random_state=base_seed)
+            pop.append({
+                'model': m,
+                'accuracy': acc,
+                'size': size,
+                'subproblem_idx': i,
+                'weight': weight_vectors[i]
+            })
 
     # Compute ideal reference point z from the initial population
     ideal_point = [max(ind['accuracy'] for ind in pop), min(ind['size'] for ind in pop)]
@@ -356,7 +398,7 @@ def moead(pop_size=20, generations=10, pm=0.3, pc=0.9, data_path=None,
         print(f"  Mutation Rate: {current_pm:.3f}")
         print(f"  Ideal Point: Acc={ideal_point[0]:.4f}, Size={format_size(ideal_point[1])}")
 
-        # Evolve each subproblem i = 1 … N
+        children = []
         for i in range(num_subproblems):
             # B(i): neighborhood pre-computed via Euclidean distance (Fix 1)
             neighbors = neighborhoods[i]
@@ -383,22 +425,36 @@ def moead(pop_size=20, generations=10, pm=0.3, pc=0.9, data_path=None,
             # Mutation
             child.mutate(current_pm)
 
-            # Evaluate child y
-            acc, size = evaluate_model(child, data_path, verbose=False, random_state=base_seed)
-            child_solution = {
+            children.append({
                 'model': child,
-                'accuracy': acc,
-                'size': size,
                 'subproblem_idx': i,
                 'weight': weight_vectors[i]
-            }
+            })
 
+        if n_jobs > 1:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=n_jobs) as executor:
+                payloads = [
+                    (child['model'].getModelName(), child['model'].getModelParams(), data_path, base_seed)
+                    for child in children
+                ]
+                results = list(executor.map(_evaluate_model_worker, payloads))
+            for child, (acc, size) in zip(children, results):
+                child['accuracy'] = acc
+                child['size'] = size
+        else:
+            for child in children:
+                acc, size = evaluate_model(child['model'], data_path, verbose=False, random_state=base_seed)
+                child['accuracy'] = acc
+                child['size'] = size
+
+        for child_solution in children:
             # Update z: ∀j=1…n, if z_j < f_j(y) then z_j = f_j(y)
-            ideal_point[0] = max(ideal_point[0], acc)   # maximize accuracy
-            ideal_point[1] = min(ideal_point[1], size)  # minimize size
+            ideal_point[0] = max(ideal_point[0], child_solution['accuracy'])   # maximize accuracy
+            ideal_point[1] = min(ideal_point[1], child_solution['size'])  # minimize size
 
             # Update neighboring solutions: for each j ∈ B(i),
             # if g^te(y | λʲ, z) ≤ g^te(xʲ | λʲ, z) then set xʲ = y
+            neighbors = neighborhoods[child_solution['subproblem_idx']]
             num_updates = max(1, int(len(neighbors) * replacement_rate))
             neighbors_to_update = random.sample(neighbors, min(num_updates, len(neighbors)))
 

@@ -6,6 +6,7 @@ import warnings
 import pickle
 import numpy as np
 import time
+import concurrent.futures
 
 # Import modules with fallbacks for relative imports
 try:
@@ -30,6 +31,26 @@ def format_size(size_bytes):
         return f"{size_bytes / 1024:.2f} KB"
     else:  # Bytes
         return f"{size_bytes:.0f} B"
+
+
+def _set_worker_thread_limits():
+    os.environ['OMP_NUM_THREADS'] = '1'
+    os.environ['MKL_NUM_THREADS'] = '1'
+    os.environ['OPENBLAS_NUM_THREADS'] = '1'
+    os.environ['NUMEXPR_NUM_THREADS'] = '1'
+
+
+def _normalize_n_jobs(n_jobs):
+    if n_jobs is None:
+        return max(1, min(4, os.cpu_count() or 1))
+    return max(1, int(n_jobs))
+
+
+def _evaluate_model_worker(args):
+    model_name, model_params, data_path, random_state = args
+    _set_worker_thread_limits()
+    model = Model.from_solution(model_name, model_params)
+    return evaluate_model(model, data_path, verbose=False, random_state=random_state)
 
 
 def dominates(a, b):
@@ -269,7 +290,7 @@ def nsga2(pop_size=20, generations=10, pm=0.3, pc=0.9, data_path=None, plot_path
           update_meta_db=True,
           hv_ref_point=(0.0, 1e12),
           dataset_similarity_threshold=0.7,
-          save_plot=True, show_plot=True, verbose=True):
+          save_plot=True, show_plot=True, verbose=True, n_jobs=None):
     """
     NSGA-II with meta-learning enhancements.
     
@@ -318,6 +339,10 @@ def nsga2(pop_size=20, generations=10, pm=0.3, pc=0.9, data_path=None, plot_path
 
     print(f"Random seed set to: {seed} (base_seed={base_seed})")
     print(f"First random numbers for verification: {random.random():.6f}, {np.random.random():.6f}")
+
+    n_jobs = _normalize_n_jobs(n_jobs)
+    if verbose:
+        print(f"Parallel workers: {n_jobs}")
 
     # Initialize meta-learner
     meta_learner = MetaLearner(meta_db_path=meta_db_path, seed=seed)
