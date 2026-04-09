@@ -1,0 +1,64 @@
+=== META-LEARNING KNOWLEDGE SUMMARY ===
+
+Total solutions learned: 24
+
+Model Performance Ranking:
+--------------------------------------------------
+HistGradientBoosting:
+  Average Accuracy: 0.9547
+  Times in Pareto Front: 6/6
+  Win Rate: 100.00%
+
+MLP:
+  Average Accuracy: 0.9432
+  Times in Pareto Front: 11/11
+  Win Rate: 100.00%
+
+LogisticRegression:
+  Average Accuracy: 0.9295
+  Times in Pareto Front: 7/7
+  Win Rate: 100.00%
+
+
+Top 10 Solutions:
+--------------------------------------------------
+1. LogisticRegression
+   Accuracy: 0.9359, Size: 1161
+   Fitness: 0.7939
+
+2. LogisticRegression
+   Accuracy: 0.9348, Size: 1159
+   Fitness: 0.7933
+
+3. LogisticRegression
+   Accuracy: 0.9348, Size: 1160
+   Fitness: 0.7932
+
+4. LogisticRegression
+   Accuracy: 0.9337, Size: 1159
+   Fitness: 0.7925
+
+5. LogisticRegression
+   Accuracy: 0.9283, Size: 1168
+   Fitness: 0.7882
+
+6. LogisticRegression
+   Accuracy: 0.9261, Size: 1161
+   Fitness: 0.7871
+
+7. LogisticRegression
+   Accuracy: 0.9130, Size: 1160
+   Fitness: 0.7780
+
+8. HistGradientBoosting
+   Accuracy: 0.9576, Size: 1788343
+   Fitness: 0.6705
+
+9. HistGradientBoosting
+   Accuracy: 0.9565, Size: 331120
+   Fitness: 0.6705
+
+10. HistGradientBoosting
+   Accuracy: 0.9576, Size: 2470932
+   Fitness: 0.6704
+
